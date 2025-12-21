@@ -1,0 +1,26 @@
+services:
+  platform-api:
+    build: ./api
+    ports:
+      - "8080:8080"
+    environment:
+      - PLATFORM_DB_HOST=platform-db
+      - PLATFORM_DB_USER=platform
+      - PLATFORM_DB_PASSWORD=platform123
+      - PLATFORM_DB_NAME=platform
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # toegang tot Docker Engine
+    depends_on:
+      - platform-db
+
+  platform-db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=platform
+      - POSTGRES_USER=platform
+      - POSTGRES_PASSWORD=platform123
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
