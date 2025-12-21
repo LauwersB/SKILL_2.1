@@ -1,6 +1,16 @@
 import yaml
 import os
 import logging
+import sys
+
+# 1. Bepaal waar we zijn en waar de hoofdmap is
+current_dir = os.path.dirname(__file__)
+root_dir = os.path.abspath(os.path.join(current_dir, '..'))
+
+# 2. Bouw het pad naar de services van Yassine
+services_path = os.path.join(root_dir, 'platform-api', 'services')
+sys.path.append(services_path)
+
 from app_detector import detect_application_type  # Detectie van Yassine
 from storage import save_provision_record  # Database opslag van yassine
 from db_provisioning import _generate_random_string, _find_free_port, PASSWORD_LENGTH
