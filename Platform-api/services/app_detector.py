@@ -7,84 +7,55 @@ from typing import Dict, List
 logger = logging.getLogger(__name__)
 
 # Detectie markers voor verschillende applicatietypes
+# Simpel: alleen PHP, Node.js, Python en HTML
 DETECTION_MARKERS = {
     "php": {
-        "files": ["composer.json", "composer.lock"],
+        "files": ["composer.json"],
         "extensions": [".php"],
-        "web_servers": ["apache", "nginx"],
-        "runtime": "php-fpm",
+        "web_servers": ["apache"],
+        "runtime": None,  # PHP draait in Apache
         "db_drivers": ["pdo_mysql", "pdo_pgsql", "mysqli"]
     },
     "nodejs": {
-        "files": ["package.json", "package-lock.json", "yarn.lock"],
-        "extensions": [".js", ".jsx", ".ts", ".tsx"],
-        "web_servers": ["nginx"],  # Voor statische assets
+        "files": ["package.json"],
+        "extensions": [".js"],
+        "web_servers": ["nginx"],
         "runtime": "node",
-        "api_frameworks": ["express", "fastify", "koa", "nest"],
-        "web_frameworks": ["next", "nuxt", "gatsby", "react", "vue"]
+        "api_frameworks": ["express"]
     },
     "python": {
-        "files": ["requirements.txt", "setup.py", "pyproject.toml", "Pipfile", "poetry.lock"],
+        "files": ["requirements.txt"],
         "extensions": [".py"],
         "web_servers": ["nginx"],
         "runtime": "python",
-        "api_frameworks": ["fastapi", "flask", "django", "tornado"],
-        "db_drivers": ["psycopg2", "mysql-connector", "sqlalchemy"]
+        "api_frameworks": ["fastapi", "flask", "django"],
+        "db_drivers": ["psycopg2", "mysql-connector"]
     },
-    "java": {
-        "files": ["pom.xml", "build.gradle", "build.gradle.kts"],
-        "extensions": [".java", ".jar"],
-        "web_servers": ["tomcat", "jetty"],
-        "runtime": "java",
-        "api_frameworks": ["spring-boot", "spring", "quarkus"]
-    },
-    "go": {
-        "files": ["go.mod", "go.sum"],
-        "extensions": [".go"],
+    "html": {
+        "files": ["index.html"],
+        "extensions": [".html", ".htm"],
         "web_servers": ["nginx"],
-        "runtime": "go",
-        "api_frameworks": ["gin", "echo", "fiber"]
-    },
-    "ruby": {
-        "files": ["Gemfile", "Gemfile.lock"],
-        "extensions": [".rb"],
-        "web_servers": ["nginx"],
-        "runtime": "ruby",
-        "api_frameworks": ["rails", "sinatra"]
+        "runtime": None,
+        "static": True
     }
 }
 
-# Database detectie markers
+# Database detectie markers - MySQL, PostgreSQL en InfluxDB
 DB_MARKERS = {
     "mysql": {
-        "keywords": ["mysql", "mariadb"],
-        "drivers": ["mysql-connector", "pymysql", "mysql2", "mysqli", "pdo_mysql"],
-        "config_patterns": ["mysql://", "mariadb://"]
+        "keywords": ["mysql"],
+        "drivers": ["mysql-connector", "pymysql", "mysqli", "pdo_mysql"],
+        "config_patterns": ["mysql://"]
     },
     "postgresql": {
-        "keywords": ["postgres", "postgresql", "pg"],
-        "drivers": ["psycopg2", "pg", "postgres", "postgresql"],
+        "keywords": ["postgres", "postgresql"],
+        "drivers": ["psycopg2", "pg", "postgres"],
         "config_patterns": ["postgres://", "postgresql://"]
-    },
-    "mongodb": {
-        "keywords": ["mongodb", "mongo"],
-        "drivers": ["pymongo", "mongoose", "mongodb"],
-        "config_patterns": ["mongodb://"]
-    },
-    "redis": {
-        "keywords": ["redis"],
-        "drivers": ["redis", "ioredis", "redis-py"],
-        "config_patterns": ["redis://"]
     },
     "influxdb": {
         "keywords": ["influxdb", "influx"],
         "drivers": ["influxdb-client", "influx"],
         "config_patterns": ["influxdb://"]
-    },
-    "sqlite": {
-        "keywords": ["sqlite"],
-        "drivers": ["sqlite3", "sqlite"],
-        "config_patterns": [".db", ".sqlite"]
     }
 }
 
@@ -125,21 +96,30 @@ def _analyze_directory(directory: str) -> Dict:
         logger.error(f"Fout bij lezen van directory: {e}")
         return {"error": str(e)}
 
-    # Detecteer applicatietype
-    for app_type, markers in DETECTION_MARKERS.items():
+    # Detecteer applicatietype - simpel: check op marker bestanden
+    detection_order = ["php", "nodejs", "python", "html"]
+    
+    for app_type in detection_order:
+        if app_type not in DETECTION_MARKERS:
+            continue
+            
+        markers = DETECTION_MARKERS[app_type]
         score = 0
         found_files = []
         
-        # Check voor marker bestanden
+        # Simpel: check of marker bestand bestaat
         for marker_file in markers.get("files", []):
-            if marker_file in all_files or any(f.endswith(marker_file) for f in all_files):
-                score += 10
+            if marker_file in all_files:
+                score = 100  # Als marker bestand gevonden, 100% zeker
                 found_files.append(marker_file)
+                break  # Stop na eerste match
         
-        # Check voor bestandsextensies
-        extension_count = sum(1 for f in all_files if any(f.endswith(ext) for ext in markers.get("extensions", [])))
-        if extension_count > 0:
-            score += min(extension_count / 10, 5)  # Max 5 punten
+        # Als geen marker bestand, check extensies
+        if score == 0:
+            for ext in markers.get("extensions", []):
+                if any(f.lower().endswith(ext.lower()) for f in all_files):
+                    score = 50  # Extensie gevonden = 50% zeker
+                    break
         
         if score > 0:
             detected_types.append({
@@ -149,48 +129,65 @@ def _analyze_directory(directory: str) -> Dict:
             })
             results["detected_files"].extend(found_files)
 
-    # Selecteer het meest waarschijnlijke type
+    # Als er geen specifieke markers zijn maar wel HTML bestanden, gebruik HTML
+    if not detected_types:
+        html_files = [f for f in all_files if f.lower().endswith((".html", ".htm"))]
+        if html_files:
+            detected_types.append({
+                "type": "html",
+                "score": 50,
+                "found_files": [html_files[0]]
+            })
+            results["detected_files"].append(html_files[0])
+    
     if detected_types:
+        # Simpel: neem het type met hoogste score
         best_match = max(detected_types, key=lambda x: x["score"])
         results["app_type"] = best_match["type"]
-        results["confidence"] = min(best_match["score"] / 15 * 100, 100)
-        logger.info(f"Gedetecteerd applicatietype: {results['app_type']} (confidence: {results['confidence']:.1f}%)")
+        results["confidence"] = best_match["score"]
+        logger.info(f"Gedetecteerd applicatietype: {results['app_type']} (confidence: {results['confidence']}%)")
+    else:
+        # Geen type gedetecteerd - retourneer "unknown"
+        results["app_type"] = "unknown"
+        results["confidence"] = 0
+        logger.warning(f"Geen applicatietype gedetecteerd - retourneer 'unknown'")
 
     # Analyseer configuratiebestanden voor frameworks en databases
+    # ALTIJD scannen voor WEB, API & DB - ongeacht applicatietype
     if results["app_type"] != "unknown":
         markers = DETECTION_MARKERS[results["app_type"]]
         
-        # Check voor API frameworks
+        # Check voor frameworks (simpel: alleen Node.js en Python)
         if results["app_type"] == "nodejs":
             _detect_nodejs_frameworks(path, results, markers)
         elif results["app_type"] == "python":
             _detect_python_frameworks(path, results, markers)
         
-        # Voeg runtime containers toe
+        # Voeg runtime containers toe (niet voor statische HTML sites)
         runtime = markers.get("runtime")
-        if runtime:
-            if results["app_type"] in ["nodejs", "python", "go", "ruby"]:
+        if runtime and not markers.get("static", False):
+            if results["app_type"] in ["nodejs", "python"]:
                 results["containers"]["api"].append({
                     "type": runtime,
                     "image": _get_runtime_image(results["app_type"], runtime),
                     "reason": f"Runtime voor {results['app_type']} applicatie"
                 })
-            elif results["app_type"] == "php":
-                results["containers"]["web"].append({
-                    "type": runtime,
-                    "image": "php:8-fpm",
-                    "reason": "PHP-FPM runtime"
-                })
         
         # Voeg web servers toe
-        for web_server in markers.get("web_servers", []):
+        # Voor HTML/statische sites: altijd nginx gebruiken
+        web_servers = markers.get("web_servers", [])
+        if results["app_type"] == "html" and "nginx" not in web_servers:
+            web_servers = ["nginx"]  # Forceer nginx voor HTML sites
+        
+        # Voeg alle webservers toe (meestal maar één)
+        for web_server in web_servers:
             results["containers"]["web"].append({
                 "type": web_server,
                 "image": _get_web_server_image(web_server),
                 "reason": f"Web server voor {results['app_type']} applicatie"
             })
 
-    # Detecteer databases
+    # ALTIJD databases detecteren - ook voor HTML sites (kan backend API hebben)
     _detect_databases(path, all_files, results)
 
     return results
@@ -203,6 +200,9 @@ def _detect_nodejs_frameworks(path: Path, results: Dict, markers: Dict):
         try:
             with open(package_json_path, 'r', encoding='utf-8') as f:
                 package_data = json.load(f)
+                if not isinstance(package_data, dict):
+                    logger.warning(f"package.json is geen dict maar {type(package_data)}")
+                    return
                 dependencies = {**package_data.get("dependencies", {}), **package_data.get("devDependencies", {})}
                 
                 # Check voor API frameworks
@@ -216,6 +216,8 @@ def _detect_nodejs_frameworks(path: Path, results: Dict, markers: Dict):
                     if framework in dependencies:
                         results["detected_frameworks"].append(framework)
                         logger.info(f"Gedetecteerd web framework: {framework}")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Kon package.json niet parsen als JSON: {e}")
         except Exception as e:
             logger.warning(f"Kon package.json niet lezen: {e}")
 
@@ -237,12 +239,11 @@ def _detect_python_frameworks(path: Path, results: Dict, markers: Dict):
 
 
 def _detect_databases(path: Path, all_files: List[str], results: Dict):
-    """Detecteer gebruikte databases."""
+    """Detecteer gebruikte databases - ALTIJD uitgevoerd voor alle applicatietypes."""
     detected_dbs = set()
     
-    # Check configuratiebestanden
-    config_files = [".env", ".env.local", "config.json", "config.yml", "config.yaml", 
-                   "application.properties", "application.yml", "settings.py", "config.php"]
+    # Check configuratiebestanden (simpel: alleen .env en config.json)
+    config_files = [".env", "config.json"]
     
     for config_file in config_files:
         config_path = path / config_file
@@ -250,30 +251,43 @@ def _detect_databases(path: Path, all_files: List[str], results: Dict):
             try:
                 content = config_path.read_text(encoding='utf-8', errors='ignore').lower()
                 for db_type, db_markers in DB_MARKERS.items():
+                    # Check config patterns
                     for pattern in db_markers.get("config_patterns", []):
                         if pattern in content:
                             detected_dbs.add(db_type)
-                            logger.info(f"Database gedetecteerd via config: {db_type}")
+                            logger.info(f"Database gedetecteerd via config bestand {config_file}: {db_type}")
+                    # Check keywords
+                    for keyword in db_markers.get("keywords", []):
+                        if keyword in content:
+                            detected_dbs.add(db_type)
+                            logger.info(f"Database gedetecteerd via keyword in {config_file}: {db_type}")
             except Exception as e:
-                logger.warning(f"Kon config bestand niet lezen: {e}")
+                logger.warning(f"Kon config bestand {config_file} niet lezen: {e}")
     
-    # Check dependencies
-    if results["app_type"] == "nodejs":
+    # Check dependencies op basis van applicatietype
+    app_type = results.get("app_type", "unknown")
+    
+    if app_type == "nodejs":
         package_json_path = path / "package.json"
         if package_json_path.exists():
             try:
                 with open(package_json_path, 'r', encoding='utf-8') as f:
                     package_data = json.load(f)
+                    if not isinstance(package_data, dict):
+                        logger.warning(f"package.json is geen dict maar {type(package_data)}")
+                        return
                     dependencies = {**package_data.get("dependencies", {}), **package_data.get("devDependencies", {})}
                     for db_type, db_markers in DB_MARKERS.items():
                         for driver in db_markers.get("drivers", []):
                             if driver in dependencies:
                                 detected_dbs.add(db_type)
-                                logger.info(f"Database gedetecteerd via dependency: {db_type}")
+                                logger.info(f"Database gedetecteerd via Node.js dependency: {db_type}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Kon package.json niet parsen als JSON: {e}")
             except Exception as e:
                 logger.warning(f"Kon package.json niet lezen: {e}")
     
-    elif results["app_type"] == "python":
+    elif app_type == "python":
         requirements_path = path / "requirements.txt"
         if requirements_path.exists():
             try:
@@ -281,29 +295,52 @@ def _detect_databases(path: Path, all_files: List[str], results: Dict):
                     requirements = f.read().lower()
                     for db_type, db_markers in DB_MARKERS.items():
                         for driver in db_markers.get("drivers", []):
-                            if driver in requirements:
+                            # Simpel: check of driver naam in requirements voorkomt
+                            driver_lower = driver.lower()
+                            if driver_lower in requirements:
                                 detected_dbs.add(db_type)
-                                logger.info(f"Database gedetecteerd via dependency: {db_type}")
+                                logger.info(f"Database gedetecteerd via Python dependency: {db_type} (driver: {driver_lower})")
+                                break  # Stop na eerste match voor deze database
             except Exception as e:
                 logger.warning(f"Kon requirements.txt niet lezen: {e}")
+    
+    elif app_type == "php":
+        composer_json_path = path / "composer.json"
+        if composer_json_path.exists():
+            try:
+                with open(composer_json_path, 'r', encoding='utf-8') as f:
+                    composer_data = json.load(f)
+                    require = {**composer_data.get("require", {}), **composer_data.get("require-dev", {})}
+                    for db_type, db_markers in DB_MARKERS.items():
+                        for driver in db_markers.get("drivers", []):
+                            # Check exact match of substring in package names
+                            for pkg_name in require.keys():
+                                if driver.lower() in pkg_name.lower():
+                                    detected_dbs.add(db_type)
+                                    logger.info(f"Database gedetecteerd via PHP dependency: {db_type} (via {pkg_name})")
+                                    break
+            except json.JSONDecodeError as e:
+                logger.warning(f"Kon composer.json niet parsen als JSON: {e}")
+            except Exception as e:
+                logger.warning(f"Kon composer.json niet lezen: {e}")
     
     # Voeg database containers toe
     for db_type in detected_dbs:
         results["detected_databases"].append(db_type)
-        results["containers"]["db"].append({
-            "type": db_type,
-            "image": _get_database_image(db_type),
-            "reason": f"Database gedetecteerd: {db_type}"
-        })
+        db_image = _get_database_image(db_type)
+        if db_image:
+            results["containers"]["db"].append({
+                "type": db_type,
+                "image": db_image,
+                "reason": f"Database gedetecteerd: {db_type}"
+            })
 
 
 def _get_runtime_image(app_type: str, runtime: str) -> str:
     """Geef Docker image voor runtime."""
     images = {
         "node": "node:20-alpine",
-        "python": "python:3.11-slim",
-        "go": "golang:1.21-alpine",
-        "ruby": "ruby:3.2-alpine"
+        "python": "python:3.11-slim"
     }
     return images.get(runtime, f"{runtime}:latest")
 
@@ -312,9 +349,7 @@ def _get_web_server_image(web_server: str) -> str:
     """Geef Docker image voor web server."""
     images = {
         "nginx": "nginx:alpine",
-        "apache": "httpd:alpine",
-        "tomcat": "tomcat:latest",
-        "jetty": "jetty:latest"
+        "apache": "httpd:alpine"
     }
     return images.get(web_server, f"{web_server}:latest")
 
@@ -324,12 +359,9 @@ def _get_database_image(db_type: str) -> str:
     images = {
         "mysql": "mysql:8.0",
         "postgresql": "postgres:16-alpine",
-        "mongodb": "mongo:7",
-        "redis": "redis:7-alpine",
-        "influxdb": "influxdb:2.7-alpine",
-        "sqlite": None  # SQLite heeft geen container nodig
+        "influxdb": "influxdb:2.7-alpine"
     }
-    return images.get(db_type, f"{db_type}:latest")
+    return images.get(db_type)
 
 
 def detect_application_type(source_path: str) -> Dict:
@@ -340,14 +372,39 @@ def detect_application_type(source_path: str) -> Dict:
         source_path: Pad naar lokale directory (al opgehaald door collega)
     
     Returns:
-        Dict met detectieresultaten
+        Dict met detectieresultaten met altijd: app_type, containers (web, api, db), 
+        detected_files, detected_frameworks, detected_databases, confidence
+        Of {"error": "..."} bij fouten
     """
     if not source_path:
-        return {"error": "source_path is verplicht"}
+        logger.error("source_path is verplicht maar niet opgegeven")
+        return {
+            "error": "source_path is verplicht",
+            "app_type": "unknown",
+            "containers": {"web": [], "api": [], "db": []},
+            "detected_files": [],
+            "detected_frameworks": [],
+            "detected_databases": [],
+            "confidence": 0
+        }
     
     try:
         logger.info(f"Analyseren van directory: {source_path}")
         results = _analyze_directory(source_path)
+        
+        # Als er een error is, return die
+        if "error" in results:
+            logger.error(f"Fout bij analyse: {results['error']}")
+            return results
+        
+        # Zorg dat containers altijd de juiste structuur hebben
+        if "containers" not in results:
+            results["containers"] = {"web": [], "api": [], "db": []}
+        else:
+            # Zorg dat alle drie de categorieën bestaan
+            for category in ["web", "api", "db"]:
+                if category not in results["containers"]:
+                    results["containers"][category] = []
         
         # Log resultaten
         logger.info(f"Detectie voltooid:")
@@ -361,5 +418,13 @@ def detect_application_type(source_path: str) -> Dict:
         
     except Exception as e:
         logger.error(f"Fout bij detectie: {e}", exc_info=True)
-        return {"error": str(e)}
+        return {
+            "error": str(e),
+            "app_type": "unknown",
+            "containers": {"web": [], "api": [], "db": []},
+            "detected_files": [],
+            "detected_frameworks": [],
+            "detected_databases": [],
+            "confidence": 0
+        }
 

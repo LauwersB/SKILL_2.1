@@ -1,6 +1,6 @@
 services:
   platform-api:
-    build: ./api
+    build: ./Platform-api
     ports:
       - "8080:8080"
     environment:
@@ -10,6 +10,8 @@ services:
       - PLATFORM_DB_NAME=platform
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # toegang tot Docker Engine
+      - ./staging:/app/staging  # Mount staging directory voor applicatiebestanden
+      - ./staging:/tmp/poc-deployments  # Mount voor ingest_app.sh script
     depends_on:
       - platform-db
 
