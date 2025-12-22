@@ -26,7 +26,8 @@ def provision_db(req: ProvisionRequest):
 def detect_application(req: DetectRequest):
     """
     Detecteer applicatietype en benodigde containers op basis van lokale directory.
-    De directory moet al opgehaald zijn (lokaal of via GitHub) door module S1-10.
+    De directory moet al opgehaald zijn door ingest_app.sh script.
+    Gebruik het pad dat ingest_app.sh teruggeeft als source_path.
     """
     return detect_application_type(source_path=req.source_path)
 
