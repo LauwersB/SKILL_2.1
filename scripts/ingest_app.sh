@@ -21,14 +21,21 @@ cleanup_staging() {
 # --- HOOFDPROGRAMMA ---
 
 # 1. Validatie van input
-if [ "$#" -lt 2 ]; then
+if [ "$#" -lt 2 ]; 
+then
     echo "Gebruik: $0 <type: local|git> <bron_locatie>"
     exit 1
 fi
 
 SOURCE_TYPE=$1
 SOURCE_LOCATION=$2
-TARGET_DIR="$STAGING_ROOT/app_$TIMESTAMP"
+
+# Dynamische naamgeving: extraheer de naam uit de bronlocatie
+# Bijv: /home/user/project-abc -> project-abc
+# Bijv: https://github.com/user/web-app.git -> web-app
+APP_NAME=$(basename "$SOURCE_LOCATION" .git)
+
+TARGET_DIR="$STAGING_ROOT/${APP_NAME}_$TIMESTAMP"
 
 # Zorg dat de staging root bestaat 
 mkdir -p "$STAGING_ROOT"
