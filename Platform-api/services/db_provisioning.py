@@ -3,7 +3,7 @@ import socket
 import string
 import docker
 import logging
-from .storage import save_provision_record
+from storage import save_provision_record
 
 logger = logging.getLogger(__name__)
 

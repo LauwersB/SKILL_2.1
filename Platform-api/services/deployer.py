@@ -1,19 +1,13 @@
 import yaml
 import os
 import logging
-import sys
-
-# 1. Bepaal waar we zijn en waar de hoofdmap is
-current_dir = os.path.dirname(__file__)
-root_dir = os.path.abspath(os.path.join(current_dir, '..'))
-
-# 2. Bouw het pad naar de services van Yassine
-services_path = os.path.join(root_dir, 'platform-api', 'services')
-sys.path.append(services_path)
+from dotenv import load_dotenv
 
 from app_detector import detect_application_type  # Detectie van Yassine
 from storage import save_provision_record  # Database opslag van yassine
 from db_provisioning import _generate_random_string, _find_free_port, PASSWORD_LENGTH
+
+load_dotenv()  # Dit laadt de variabelen uit .env in het geheugen
 
 # Configuratie
 PASSWORD_LENGTH = 24
@@ -112,17 +106,24 @@ def generate_full_deployment(app_id, source_path):
 
 # --- UITVOERING ---
 if __name__ == "__main__":
-    APP_ID = "sensor-project-01"
-    PATH = "/tmp/poc-deployments/app_xyz"  # Waar de git files staan
+    APP_ID = "testproject"
+    PATH = "/tmp/poc-deployments/testproject_20251224102114"
 
     try:
+        # Dit roept de detector aan en maakt de config
         config, p_web, p_db = generate_full_deployment(APP_ID, PATH)
 
-        # Schrijf docker-compose.yml naar de projectmap
-        with open(os.path.join(PATH, "docker-compose.yml"), "w") as f:
-            yaml.dump(config, f, default_flow_style=False)
+        # Schrijf de docker-compose.yml naar de map van de app
+        import yaml
 
-        print(f"✅ Klaar! Web: http://localhost:{p_web}")
-        print(f"📡 Database (sensordata): localhost:{p_db}")
+        compose_path = os.path.join(PATH, "docker-compose.yml")
+        with open(compose_path, "w") as f:
+            yaml.dump(config, f)
+
+        print(f"\n✅ GELUKT!")
+        print(f"De App Detector heeft de HTML site herkend.")
+        print(f"De docker-compose.yml is aangemaakt in: {PATH}")
+        print(f"🌐 Je kunt de site straks bezoeken op poort: {p_web}")
+
     except Exception as e:
         print(f"❌ Fout: {e}")
