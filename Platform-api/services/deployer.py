@@ -1,129 +1,139 @@
+import logging
 import yaml
 import os
-import logging
-from dotenv import load_dotenv
+from typing import Dict, Tuple, Optional
 
-from app_detector import detect_application_type  # Detectie van Yassine
-from storage import save_provision_record  # Database opslag van yassine
-from db_provisioning import _generate_random_string, _find_free_port, PASSWORD_LENGTH
+from services.app_detector import detect_application_type
+from services.storage import save_provision_record
+from services.db_provisioning import _generate_random_string, _find_free_port
 
-load_dotenv()  # Dit laadt de variabelen uit .env in het geheugen
-
-# Configuratie
-PASSWORD_LENGTH = 24
-PORT_RANGE_START = 8081
-PORT_RANGE_END = 9000
-
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def generate_full_deployment(app_id, source_path):
-    """
-    Voert de volledige workflow uit: poorten zoeken, detectie,
-    wachtwoord genereren en opslaan.
-    """
-    # 1. Zoek vrije poorten
-    web_port = _find_free_port(8081)
-    db_external_port = _find_free_port(web_port + 1)
+def _prepare_db_config(app_id: str, db_type: str, db_image: str) -> Dict:
+    """Genereert technische details en credentials voor de database."""
+    db_pass = _generate_random_string(24)
+    db_name = f"db_{app_id.replace('-', '_')}"
+    ext_port = _find_free_port(9000)
 
-    # 2. Haal info op via de API/Detector
-    detection_results = detect_application_type(source_path)
-    if "error" in detection_results:
-        return detection_results
+    # Bepaal poort en env op basis van type
+    is_postgres = "postgres" in db_type
+    internal_port = "5432" if is_postgres else "3306"
 
-    services = {}
-    db_info_for_storage = None
+    if is_postgres:
+        env = {"POSTGRES_PASSWORD": db_pass, "POSTGRES_USER": "admin", "POSTGRES_DB": db_name}
+    else:
+        env = {"MYSQL_ROOT_PASSWORD": db_pass, "MYSQL_DATABASE": db_name,
+               "MYSQL_USER": "admin", "MYSQL_PASSWORD": db_pass}
 
-    # 3. Verwerk Web Containers (Extern bereikbaar)
-    for web_cont in detection_results.get('containers', {}).get('web', []):
-        name = f"web_{web_cont['type']}"
-        services[name] = {
-            "image": web_cont['image'],
-            "ports": [f"{web_port}:80"],
-            "volumes": [f"{source_path}:/var/www/html"],
-            "networks": ["extern", "intern"],
-            "restart": "unless-stopped"
-        }
-
-    # 4. Verwerk Database & Sensordata connectie
-    for db_cont in detection_results.get('containers', {}).get('db', []):
-        db_type = db_cont['type']
-        db_pass = _generate_random_string()
-        db_user = "admin"
-        db_name = f"data_{app_id.replace('-', '_')}"
-
-        # Mapping voor verschillende DB types
-        env = {}
-        internal_port = ""
-        if "postgres" in db_type:
-            env = {"POSTGRES_PASSWORD": db_pass, "POSTGRES_USER": db_user, "POSTGRES_DB": db_name}
-            internal_port = "5432"
-        elif "mysql" in db_type or "mariadb" in db_type:
-            env = {"MYSQL_ROOT_PASSWORD": db_pass, "MYSQL_DATABASE": db_name}
-            internal_port = "3306"
-
-        services["database"] = {
-            "image": db_cont['image'],
-            "environment": env,
-            "ports": [f"{db_external_port}:{internal_port}"],  # Externe poort voor sensordata
-            "networks": ["intern"],  # Intern voor de app, ports voor sensoren
-            "restart": "unless-stopped"
-        }
-
-        # Voorbereiden voor opslag in platform database
-        db_info_for_storage = {
-            "app_id": app_id,
-            "db_name": db_name,
-            "db_user": db_user,
-            "db_password": db_pass,
-            "db_port": db_external_port
-        }
-
-    # 5. Netwerk definitie (Isolatie)
-    compose_dict = {
-        "version": "3.8",
-        "services": services,
-        "networks": {
-            "extern": {"driver": "bridge"},
-            "intern": {"driver": "bridge", "internal": True}
+    return {
+        "service_name": "database",
+        "image": db_image,
+        "environment": env,
+        "port_mapping": f"{ext_port}:{internal_port}",
+        "storage_data": {
+            "db_name": db_name, "db_user": "admin",
+            "db_password": db_pass, "db_port": ext_port
         }
     }
 
-    # 6. Opslaan in Platform DB
-    if db_info_for_storage:
-        save_provision_record(
-            app_id=db_info_for_storage["app_id"],
-            db_name=db_info_for_storage["db_name"],
-            db_user=db_info_for_storage["db_user"],
-            db_password=db_info_for_storage["db_password"],
-            db_port=db_info_for_storage["db_port"],
-            container_id=f"deployed_{app_id}_db"
-        )
 
-    return compose_dict, web_port, db_external_port
+def _write_compose_file(app_id: str, compose_dict: Dict) -> str:
+    """Schrijft de dict naar een fysieke docker-compose.yml file."""
+    base_path = f"/app/deployments/{app_id}"
+    os.makedirs(base_path, exist_ok=True)
+
+    file_path = os.path.join(base_path, "docker-compose.yml")
+
+    with open(file_path, 'w') as f:
+        yaml.dump(compose_dict, f, default_flow_style=False)
+
+    logger.info(f"Docker Compose bestand geschreven naar: {file_path}")
+    return file_path
 
 
-# --- UITVOERING ---
-if __name__ == "__main__":
-    APP_ID = "testproject"
-    PATH = "/tmp/poc-deployments/testproject_20251224102114"
+def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Dict], Optional[int], Optional[int]]:
+    """
+    Coördineert de volledige deployment blueprint creatie.
+    """
+    # 1. Analyse (roept functie op om APP_DETECTOR te starten)
+    detection = detect_application_type(source_path)
+    if "error" in detection:
+        logger.error(f"Analyse mislukt voor {app_id}: {detection['error']}")
+        return None, None, None
+
+    services = {}
+    db_info = None
+    network_name = f"net_{app_id.replace('-', '_')}"
+
+    # 2. Database Sectie
+    db_conts = detection.get('containers', {}).get('db', [])
+    if db_conts:
+        # We pakken de eerste gedetecteerde DB
+        db_cfg = _prepare_db_config(app_id, db_conts[0]['type'], db_conts[0]['image'])
+
+        services[db_cfg["service_name"]] = {
+            "image": db_cfg["image"],
+            "environment": db_cfg["environment"],
+            "ports": [db_cfg["port_mapping"]],
+            "networks": [network_name],
+            "restart": "unless-stopped"
+        }
+        db_info = db_cfg["storage_data"]
+
+    # 3. Web Sectie
+    web_conts = detection.get('containers', {}).get('web', [])
+    web_port = _find_free_port(8081)
+
+    if web_conts:
+        web_env = {}
+        if db_info:
+            web_env = {
+                "DB_HOST": "database",
+                "DB_NAME": db_info["db_name"],
+                "DB_USER": db_info["db_user"],
+                "DB_PASS": db_info["db_password"]
+            }
+
+        services["app"] = {
+            "image": web_conts[0]['image'],
+            "ports": [f"{web_port}:80"],
+            "volumes": [f"{source_path}:/var/www/html"],
+            "environment": web_env,
+            "networks": [network_name],
+            "restart": "unless-stopped"
+        }
+
+    # 4. Finaliseer Compose
+    compose_dict = {
+        "version": "3.8",
+        "services": services,
+        "networks": {network_name: {"driver": "bridge"}}
+    }
 
     try:
-        # Dit roept de detector aan en maakt de config
-        config, p_web, p_db = generate_full_deployment(APP_ID, PATH)
+        _write_compose_file(app_id, compose_dict)
+    except Exception as e:
+        logger.error(f"Kon compose bestand niet schrijven voor {app_id}: {e}")
+        return None, None, None
 
-        # Schrijf de docker-compose.yml naar de map van de app
-        import yaml
-
-        compose_path = os.path.join(PATH, "docker-compose.yml")
-        with open(compose_path, "w") as f:
-            yaml.dump(config, f)
-
-        print(f"\n✅ GELUKT!")
-        print(f"De App Detector heeft de HTML site herkend.")
-        print(f"De docker-compose.yml is aangemaakt in: {PATH}")
-        print(f"🌐 Je kunt de site straks bezoeken op poort: {p_web}")
+    # 5. Administratie (alle projectinfo (app_id, container_id, db_name, db_user, db_password, db_port) wordt opgeslagen in DB van platform)
+    try:
+        # We halen de waarden uit db_info als die bestaat, anders None/0
+        save_provision_record(
+            app_id=app_id,
+            db_name=db_info["db_name"] if db_info else None,
+            db_user=db_info["db_user"] if db_info else None,
+            db_password=db_info["db_password"] if db_info else None,
+            db_port=db_info["db_port"] if db_info else 0,
+            container_id="pending"
+        )
+        logger.info(f"Administratie voor {app_id} succesvol verwerkt.")
 
     except Exception as e:
-        print(f"❌ Fout: {e}")
+        # NOODSCENARIO: Als de database-opslag mislukt, stoppen we de deployment
+        logger.critical(f"FATALE FOUT: Kon administratie niet opslaan voor {app_id}: {e}")
+        return None, None, None
+
+        # Alles is gelukt, geef de data terug aan main.py
+    return compose_dict, web_port, (db_info["db_port"] if db_info else None)

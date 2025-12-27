@@ -7,6 +7,7 @@ from typing import Dict, List
 logger = logging.getLogger(__name__)
 
 # Detectie markers voor verschillende applicatietypes
+# ( detector gaat op zoek naar deze markers om te herkennen welk type applicatie er ingevoerd werd)
 # Simpel: alleen PHP, Node.js, Python en HTML
 DETECTION_MARKERS = {
     "php": {
@@ -61,7 +62,7 @@ DB_MARKERS = {
 
 
 def _analyze_directory(directory: str) -> Dict:
-    """Analyseer een directory en detecteer applicatietype en benodigde containers."""
+    # Deze functie verzamelt de "bewijsstukken" en roept vervolgens de gespecialiseerde functies hieronder aan om de details in te vullen.
     path = Path(directory)
     if not path.exists():
         logger.error(f"Directory bestaat niet: {directory}")
@@ -194,7 +195,7 @@ def _analyze_directory(directory: str) -> Dict:
 
 
 def _detect_nodejs_frameworks(path: Path, results: Dict, markers: Dict):
-    """Detecteer Node.js frameworks."""
+    # wordt alleen aangeroepen als de analyze_directory al heeft beslist dat de app Node.js is.
     package_json_path = path / "package.json"
     if package_json_path.exists():
         try:
@@ -223,7 +224,7 @@ def _detect_nodejs_frameworks(path: Path, results: Dict, markers: Dict):
 
 
 def _detect_python_frameworks(path: Path, results: Dict, markers: Dict):
-    """Detecteer Python frameworks."""
+    # wordt alleen aangeroepen als de analyze_directory al heeft beslist dat de app Python is.
     requirements_path = path / "requirements.txt"
     if requirements_path.exists():
         try:
@@ -239,7 +240,7 @@ def _detect_python_frameworks(path: Path, results: Dict, markers: Dict):
 
 
 def _detect_databases(path: Path, all_files: List[str], results: Dict):
-    """Detecteer gebruikte databases - ALTIJD uitgevoerd voor alle applicatietypes."""
+    # Wordt altijd aangeroepen door de analyse_directory, ongeacht het applicatietype.
     detected_dbs = set()
     
     # Check configuratiebestanden (simpel: alleen .env en config.json)
@@ -365,17 +366,14 @@ def _get_database_image(db_type: str) -> str:
 
 
 def detect_application_type(source_path: str) -> Dict:
-    """
-    Detecteer applicatietype en benodigde containers op basis van lokale directory.
-    
-    Args:
-        source_path: Pad naar lokale directory (al opgehaald door collega)
-    
-    Returns:
-        Dict met detectieresultaten met altijd: app_type, containers (web, api, db), 
-        detected_files, detected_frameworks, detected_databases, confidence
-        Of {"error": "..."} bij fouten
-    """
+    # controleert of het pad wel is ingevuld.
+    #
+    # Hij start de analyse (_analyze_directory).
+    #
+    # Hij vangt eventuele fouten (crashes) op, zodat je hele API niet plat ligt als een map onleesbaar is.
+    #
+    # Hij logt de eindresultaten naar de console.
+
     if not source_path:
         logger.error("source_path is verplicht maar niet opgegeven")
         return {

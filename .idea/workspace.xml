@@ -5,13 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9691b415-cb49-4c23-8e6b-5d70d41f78d9" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Platform-api/config.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Platform-api/services/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/Bjorn.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Bjorn.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Deployment-engine/deployer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Platform-api/.env.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Platform-api/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Platform-api/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Platform-api/services/app_detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/services/app_detector.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Platform-api/services/db_provisioning.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/services/db_provisioning.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/ingest_app.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/ingest_app.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Platform-api/services/deployer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/services/deployer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Platform-api/services/storage.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/services/storage.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,8 +48,11 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;ai.playground.ignore.import.keys.banner.in.settings&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/school/OneDrive - Thomas More/Documenten/Thomas more/FullStack Cloud and Devops/FastAPIProject&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -54,8 +65,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-822845ee3bb5-JavaScript-PY-243.23654.177" />
-        <option value="bundled-python-sdk-91d3a02ef49d-43b77aa2d136-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.23654.177" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.29346.142" />
+        <option value="bundled-python-sdk-f2b7a9f6281b-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.142" />
       </set>
     </attachedChunks>
   </component>
@@ -77,7 +88,15 @@
       <workItem from="1766518050452" duration="103000" />
       <workItem from="1766519180727" duration="295000" />
       <workItem from="1766567464139" duration="32000" />
-      <workItem from="1766567566596" duration="1163000" />
+      <workItem from="1766567566596" duration="11794000" />
+      <workItem from="1766762601142" duration="6728000" />
+      <workItem from="1766833581180" duration="507000" />
+      <workItem from="1766835952202" duration="26000" />
+      <workItem from="1766836275709" duration="73000" />
+      <workItem from="1766836457259" duration="857000" />
+      <workItem from="1766838295463" duration="428000" />
+      <workItem from="1766841702983" duration="1256000" />
+      <workItem from="1766843009552" duration="1189000" />
     </task>
     <servers />
   </component>
