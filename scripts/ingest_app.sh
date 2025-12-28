@@ -73,7 +73,7 @@ case $SOURCE_TYPE in
         ;;
 esac
 
-# 3. Validatie van resultaat 
+# 3. Validatie van  resultaat
 if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR")" ]; then
     log_message "SUCCESS: Applicatiebestanden succesvol ingelezen in $TARGET_DIR" 
     # Systeem valideert toegankelijkheid 
