@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # --- CONFIGURATIE ---
-STAGING_ROOT="/tmp/poc-deployments"
+# Determine the staging directory relative to this script. This ensures script always uses the repo's staging folder, regardless of the current working directory or operating system.
+STAGING_ROOT="$(cd "$(dirname "$0")/.." && pwd)/staging"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 
 # --- FUNCTIES ---
