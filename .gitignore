@@ -6,3 +6,19 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+
+# Negeer virtuele omgevingen
+venv_linux/
+venv/
+.venv/
+
+# Negeer Python cache bestanden
+__pycache__/
+*.py[cod]
+
+# Negeer IDE instellingen (optioneel, maar aangeraden)
+.idea/
+.vscode/
+
+# Negeer omgevingsvariabelen
+.env
