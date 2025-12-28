@@ -1,0 +1,10 @@
+# Force LF (Linux) line endings for shell scripts (.sh)
+# Reason:
+# - Bash scripts fail on Linux/WSL when checked out with CRLF line endings (\r\n)
+# - This repo is used across Windows, WSL, and Linux
+# - Enforcing LF prevents runtime errors like:
+#      $'\r': command not fout
+#
+# Please do NOT change this unless you know exactly why.
+
+*sh text eol=lf
