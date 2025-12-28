@@ -29,7 +29,7 @@ The platform-api gets Docker socket access and mounts ./deployments and ./stagin
 
 The ingest module is scripts/ingest_app.sh. What it does:
 - takes: local <path> or git <url>
-- copies/clones into: `/tmp/poc-deployments/<appName>_<timestamp>`
+- copies/clones into: `/staging/<appName>_<timestamp>`
 - sets permissions: chmod -R 755 <target_dir>
 - prints the resulting path
 
