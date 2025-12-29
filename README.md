@@ -63,6 +63,7 @@ What it does:
   - mounts the source folder into `/var/www/html`
   - injects db env vars if db exists (DB_HOST, DB_NAME etc.)
 - writes compose to `app/deployments/<app_id>/docker-compose.yml`
+- if PHP is detected, writes Dockerfile to `app/deployments/<app_id>/Dockerfile.app`
 - stores metadata in the platform db with container_id="pending"
 
 **5. Step 4: Persist deployment metadata**
@@ -132,11 +133,12 @@ helpers and produces a docker-compose definition, writes it to disk, and stores 
 Called by `/deploy/full-stack`.
 
 
-| Function | Description |
-|--------|------------|
-| `generate_full_deployment(app_id: str, source_path: str) -> (compose_dict, web_port, db_port)` | "Blueprint generator": detects app, decides whether to add DB and web services, assigns free ports, injects env variables, writes `/app/deployments/<app_id>/docker-compose.yml`, and persists a provision record. |
-| `_prepare_db_config(app_id: str, db_type: str, db_image: str) -> Dict` | Builds DB service config: generates credentials, chooses external port, decides internal port, produces docker-compose fields and storage_data. Sits between detection ("we need a DB") and compose generation ("here is the DB service definition"). |
-| `_write_compose_file(app_id: str, compose_dict: Dict) -> str` | Writes generated compose dict as YAML to `/app/deployments/<app_id>/docker-compose.yml`. |
+| Function                                                                                       | Description                                                                                                                                                                                                                                           |
+|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `generate_full_deployment(app_id: str, source_path: str) -> (compose_dict, web_port, db_port)` | "Blueprint generator": detects app, decides whether to add DB and web services, assigns free ports, injects env variables, writes `/app/deployments/<app_id>/docker-compose.yml`, and persists a provision record.                                    |
+| `_prepare_db_config(app_id: str, db_type: str, db_image: str) -> Dict`                         | Builds DB service config: generates credentials, chooses external port, decides internal port, produces docker-compose fields and storage_data. Sits between detection ("we need a DB") and compose generation ("here is the DB service definition"). |
+| `_write_compose_file(app_id: str, compose_dict: Dict) -> str`                                  | Writes generated compose dict as YAML to `/app/deployments/<app_id>/docker-compose.yml`.                                                                                                                                                              |
+| `_write_app_dockerfile(app_id: str)`                                                           | Writes generated Dockerfile with msqli PHP-requirements to `/app/deployments/<app_id>/Dockerfile.app`.                                                                                                                                                |
 
 ---
 
