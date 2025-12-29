@@ -1,15 +1,15 @@
 networks:
-  net_testproject_bjorn:
+  net_test_testproject:
     driver: bridge
 services:
   app:
     environment: {}
     image: nginx:alpine
     networks:
-    - net_testproject_bjorn
+    - net_test_testproject
     ports:
     - 8081:80
     restart: unless-stopped
     volumes:
-    - /app/staging/testproject_20251227123205:/var/www/html
+    - /app/clients/test/testproject/source:/var/www/html
 version: '3.8'

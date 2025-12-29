@@ -38,9 +38,16 @@ def _prepare_db_config(app_id: str, db_type: str, db_image: str) -> Dict:
     }
 
 
-def _write_compose_file(app_id: str, compose_dict: Dict) -> str:
-    """Schrijft de dict naar een fysieke docker-compose.yml file."""
-    base_path = f"/app/deployments/{app_id}"
+def _write_compose_file(app_id: str, compose_dict: Dict, source_path: str) -> str:
+    """Schrijft de dict naar een fysieke docker-compose.yml file in de client-structuur."""
+
+    # 1. Navigeer van .../source naar de bovenliggende projectmap
+    project_root = os.path.dirname(source_path)
+
+    # 2. Bepaal het pad naar de 'deployment' map (naast de 'source' map)
+    base_path = os.path.join(project_root, "deployment")
+
+    # 3. Maak de map aan als deze nog niet bestaat
     os.makedirs(base_path, exist_ok=True)
 
     file_path = os.path.join(base_path, "docker-compose.yml")
@@ -73,6 +80,7 @@ def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Di
         db_cfg = _prepare_db_config(app_id, db_conts[0]['type'], db_conts[0]['image'])
 
         services[db_cfg["service_name"]] = {
+            "container_name": f"{app_id}-db",
             "image": db_cfg["image"],
             "environment": db_cfg["environment"],
             "ports": [db_cfg["port_mapping"]],
@@ -96,6 +104,7 @@ def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Di
             }
 
         services["app"] = {
+            "container_name": f"{app_id}-app",
             "image": web_conts[0]['image'],
             "ports": [f"{web_port}:80"],
             "volumes": [f"{source_path}:/var/www/html"],
@@ -112,7 +121,7 @@ def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Di
     }
 
     try:
-        _write_compose_file(app_id, compose_dict)
+        _write_compose_file(app_id, compose_dict, source_path)
     except Exception as e:
         logger.error(f"Kon compose bestand niet schrijven voor {app_id}: {e}")
         return None, None, None
