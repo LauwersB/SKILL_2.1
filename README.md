@@ -20,16 +20,24 @@ The root docker-compose.yml defines the platform itself:
 - platform-api (FastAPI app)
 - platform-db (PostgreSQL database)
 
-The platform-api gets Docker socket access and mounts ./deployments and ./staging into the container.
+The platform-api gets Docker socket access and mounts ./clients into the container.
 
-- the API container can write generated compose files into `/app/deployments`
+- the API container can write generated compose files into `/app/clients/name_client/name_project/deployment`
 - platform-db listens on host port 5433
+
+**1. The start_project script**
+
+-./scripts/start_project.sh "<client_name>" "<github_repo_link>"
+- starts the ingest_app script
+- uses the api to generate a docker-compose file
+- starts the compose-stack 
+- controle if containers has started and info is added to platform_db
 
 **2. Step 1: Ingest**
 
 The ingest module is scripts/ingest_app.sh. What it does:
 - takes: local <path> or git <url>
-- copies/clones into: `/staging/<appName>_<timestamp>`
+- copies/clones into: `/app/clients/name_client/name_project/source/<appName>`
 - sets permissions: chmod -R 755 <target_dir>
 - prints the resulting path
 
