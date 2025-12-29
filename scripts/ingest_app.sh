@@ -1,86 +1,86 @@
 #!/bin/bash
 
 # --- CONFIGURATIE ---
-# Determine the staging directory relative to this script. This ensures script always uses the repo's staging folder, regardless of the current working directory or operating system.
-STAGING_ROOT="$(cd "$(dirname "$0")/.." && pwd)/staging"
-TIMESTAMP=$(date +%Y%m%d%H%M%S)
-
-# --- FUNCTIES ---
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+CLIENTS_ROOT="$BASE_DIR/clients"
 
 log_message() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
 }
 
-cleanup_staging() {
-    local folder=$1
-    if [ -d "$folder" ]; then
-        rm -rf "$folder"
-        log_message "Oude staging map opgeruimd: $folder"
-    fi
-}
-
 # --- HOOFDPROGRAMMA ---
 
-# 1. Validatie van input
-if [ "$#" -lt 2 ]; 
-then
-    echo "Gebruik: $0 <type: local|git> <bron_locatie>"
+# Gebruik: ./ingest_app.sh <local|git> <bron> <klantnaam>
+if [ "$#" -lt 3 ]; then
+    echo "Gebruik: $0 <local|git> <bron_pad_of_url> <klantnaam>"
     exit 1
 fi
 
 SOURCE_TYPE=$1
 SOURCE_LOCATION=$2
+KLANT=$3
 
-# Dynamische naamgeving: extraheer de naam uit de bronlocatie
-# Bijv: /home/user/project-abc -> project-abc
-# Bijv: https://github.com/user/web-app.git -> web-app
-APP_NAME=$(basename "$SOURCE_LOCATION" .git)
+# 1. Projectnaam bepalen
+# Voor Git: haalt naam uit URL. Voor Local: haalt naam uit de mapnaam.
+PROJECT_NAME=$(basename "$SOURCE_LOCATION" .git)
 
-TARGET_DIR="$STAGING_ROOT/${APP_NAME}_$TIMESTAMP"
+# 2. Doelmap bepalen (Multi-tenant structuur)
+TARGET_DIR="$CLIENTS_ROOT/$KLANT/$PROJECT_NAME/source"
 
-# Zorg dat de staging root bestaat 
-mkdir -p "$STAGING_ROOT"
+# Zorg dat de mappenstructuur bestaat
+mkdir -p "$(dirname "$TARGET_DIR")"
 
-log_message "Start inname proces (Type: $SOURCE_TYPE, Bron: $SOURCE_LOCATION)..."
+log_message "Start inname proces voor Klant: $KLANT, Project: $PROJECT_NAME"
 
-# 2. Inlezen van bestanden 
+# 3. Inlezen op basis van type
 case $SOURCE_TYPE in
     "local")
-        # Validatie: Bestaat de bronmap? 
+        log_message "Modus: Lokaal inlezen van $SOURCE_LOCATION"
+
         if [ ! -d "$SOURCE_LOCATION" ]; then
-            log_message "ERROR: Lokale bronmap '$SOURCE_LOCATION' niet gevonden." 
+            log_message "ERROR: Lokale bronmap '$SOURCE_LOCATION' niet gevonden."
             exit 1
         fi
-        
+
+        # Maak de doeltarget leeg als die al bestond (overschrijven)
+        rm -rf "$TARGET_DIR"
+        mkdir -p "$TARGET_DIR"
+
+        # Kopieer de bestanden
         cp -r "$SOURCE_LOCATION/." "$TARGET_DIR"
-        ;;
-        
-    "git")
-        # Inlezen via Git URL 
-        log_message "Clonen van repository..."
-        git clone --depth 1 "$SOURCE_LOCATION" "$TARGET_DIR" &> /dev/null
-        
-        # Error handling bij niet-bereikbare bron 
-        if [ $? -ne 0 ]; then
-            log_message "ERROR: Git clone mislukt. Controleer de URL of verbinding." 
+
+        if [ $? -eq 0 ]; then
+            log_message "SUCCESS: Bestanden lokaal gekopieerd naar $TARGET_DIR"
+        else
+            log_message "ERROR: Kopiëren mislukt."
             exit 1
         fi
         ;;
-        
+
+    "git")
+        log_message "Modus: Git clone/pull van $SOURCE_LOCATION"
+
+        if [ -d "$TARGET_DIR/.git" ]; then
+            log_message "Project bestaat al. Bezig met update (git pull)..."
+            cd "$TARGET_DIR" && git pull origin main &> /dev/null
+        else
+            log_message "Nieuw project. Bezig met git clone..."
+            git clone --depth 1 "$SOURCE_LOCATION" "$TARGET_DIR" &> /dev/null
+        fi
+
+        if [ $? -eq 0 ]; then
+            log_message "SUCCESS: Git operatie voltooid."
+        else
+            log_message "ERROR: Git operatie mislukt."
+            exit 1
+        fi
+        ;;
+
     *)
-        log_message "ERROR: Ongeldig bron-type opgegeven. Gebruik 'local' of 'git'."
+        log_message "ERROR: Ongeldig type. Gebruik 'local' of 'git'."
         exit 1
         ;;
 esac
 
-# 3. Validatie van  resultaat
-if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR")" ]; then
-    log_message "SUCCESS: Applicatiebestanden succesvol ingelezen in $TARGET_DIR" 
-    # Systeem valideert toegankelijkheid 
-    chmod -R 755 "$TARGET_DIR" 
-else
-    log_message "ERROR: Staging map is leeg of niet aangemaakt." 
-    exit 1
-fi
-
-echo "$TARGET_DIR" # Output voor de volgende module (POC-ANA-02)
+# 4. Output het pad voor het volgende script
+echo "$TARGET_DIR"

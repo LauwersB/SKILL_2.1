@@ -24,8 +24,7 @@ __pycache__/
 .env
 
 # Runtime / generated folders
-staging/
-deployments/
+clients/
 
 #Docker-generated files
 *.env
