@@ -12,7 +12,7 @@ services:
       - PLATFORM_DB_NAME=${PLATFORM_DB_NAME}
     volumes:
        - /var/run/docker.sock:/var/run/docker.sock
-       - ./staging:/app/staging
+       - ./clients:/app/clients
        - ./deployments:/app/deployments
     depends_on:
       - platform-db
