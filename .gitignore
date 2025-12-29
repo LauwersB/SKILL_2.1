@@ -22,3 +22,10 @@ __pycache__/
 
 # Negeer omgevingsvariabelen
 .env
+
+# Runtime / generated folders
+staging/
+deployments/
+
+#Docker-generated files
+*.env

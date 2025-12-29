@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # --- CONFIGURATIE ---
-STAGING_ROOT="/tmp/poc-deployments"
+# Determine the staging directory relative to this script. This ensures script always uses the repo's staging folder, regardless of the current working directory or operating system.
+STAGING_ROOT="$(cd "$(dirname "$0")/.." && pwd)/staging"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 
 # --- FUNCTIES ---
@@ -72,7 +73,7 @@ case $SOURCE_TYPE in
         ;;
 esac
 
-# 3. Validatie van resultaat 
+# 3. Validatie van  resultaat
 if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR")" ]; then
     log_message "SUCCESS: Applicatiebestanden succesvol ingelezen in $TARGET_DIR" 
     # Systeem valideert toegankelijkheid 
