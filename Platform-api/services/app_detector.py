@@ -244,13 +244,27 @@ def _detect_databases(path: Path, all_files: List[str], results: Dict):
     detected_dbs = set()
     
     # Check configuratiebestanden (simpel: alleen .env en config.json)
-    config_files = [".env", "config.json"]
+    config_files = [".env", "config.json", "database.sql"]
     
     for config_file in config_files:
         config_path = path / config_file
         if config_path.exists():
             try:
                 content = config_path.read_text(encoding='utf-8', errors='ignore').lower()
+
+                ### Presence of a .sql file implies a relational database
+                ### Default to MySQL unless PostgreSQL is explicitly mentioned
+
+                if config_file.lower().endswith(".sql"):
+                    if "postgres" in content or "postgresql" in content:
+                        detected_dbs.add("postgresql")
+                    else:
+                        detected_dbs.add("mysql")
+
+                ### Above added by Maarten to make sure test application runs (no database was detected, even though "database.sql" was present).
+                ### Needs to be further confirmed and investigated by Yassine.
+
+
                 for db_type, db_markers in DB_MARKERS.items():
                     # Check config patterns
                     for pattern in db_markers.get("config_patterns", []):
@@ -350,7 +364,7 @@ def _get_web_server_image(web_server: str) -> str:
     """Geef Docker image voor web server."""
     images = {
         "nginx": "nginx:alpine",
-        "apache": "httpd:alpine"
+        "apache": "php:8.2-apache"
     }
     return images.get(web_server, f"{web_server}:latest")
 
