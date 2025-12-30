@@ -14,9 +14,13 @@ def _prepare_db_config(app_id: str, db_type: str, db_image: str) -> Dict:
     """Genereert technische details en credentials voor de database."""
     db_pass = _generate_random_string(24)
     db_name = f"db_{app_id.replace('-', '_')}"
-    
-    # We behouden jouw externe poort-mapping zodat we de DB van buitenaf kunnen bereiken
-    ext_port = _find_free_port(9000)
+
+    ## In Docker, containers with same compose stack communicate over an internal network using the service name as hostname (e.g. "database:3306").
+    ## Selecting a free host port from inside a container is unreliable on Windows/WSL and caused deployment failures.
+
+    ## ext_port = _find_free_port(9000)
+
+    ## Bovenstaande code verwijderd door Maarten. Exposen van poorten in deze code moet verder bekeken worden door Bjorn.
 
     is_postgres = "postgres" in db_type
     internal_port = "5432" if is_postgres else "3306"
@@ -31,10 +35,10 @@ def _prepare_db_config(app_id: str, db_type: str, db_image: str) -> Dict:
         "service_name": "database",
         "image": db_image,
         "environment": env,
-        "port_mapping": f"{ext_port}:{internal_port}",
+        ## "port_mapping": f"{ext_port}:{internal_port}",
         "storage_data": {
             "db_name": db_name, "db_user": "admin",
-            "db_password": db_pass, "db_port": ext_port, "db_host": "database"
+            "db_password": db_pass, "db_port": internal_port, "db_host": "database"
         }
     }
 
@@ -85,7 +89,7 @@ def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Di
             "container_name": f"{app_id}-db",
             "image": db_cfg["image"],
             "environment": db_cfg["environment"],
-            "ports": [db_cfg["port_mapping"]],
+            ## "ports": [db_cfg["port_mapping"]],
             "networks": [network_name],
             "restart": "unless-stopped"
         }
@@ -112,7 +116,7 @@ def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Di
         if db_info:
             web_env = {
                 "DB_HOST": "database",
-                "DB_PORT": db_info.get("db_port", "3306"),
+                "DB_PORT": str(db_info["db_port"]),
                 "DB_NAME": db_info["db_name"],
                 "DB_USER": db_info["db_user"],
                 "DB_PASS": db_info["db_password"]
