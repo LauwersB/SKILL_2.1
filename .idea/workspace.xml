@@ -5,29 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9691b415-cb49-4c23-8e6b-5d70d41f78d9" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/scripts/start_project.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitattributes" beforeDir="false" afterPath="$PROJECT_DIR$/.gitattributes" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/Bjorn.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Bjorn.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/.dockerignore" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/.dockerignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/services/app_detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/services/app_detector.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/services/db_provisioning.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/services/db_provisioning.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/services/deployer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/services/deployer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Platform-api/services/storage.py" beforeDir="false" afterPath="$PROJECT_DIR$/Platform-api/services/storage.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deployments/testproject-bjorn/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/clients/test/testproject/deployment/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deployments/voting-app-test/docker-compose.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/clients/test/testproject/deployment/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/clients/test/testproject/deployment/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/ingest_app.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/ingest_app.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -60,7 +38,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "SHELLCHECK.PATH": "I do mind",
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
-    "git-widget-placeholder": "automatisatie__upload__en__start__nieuw__project",
+    "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "C:/Users/school/OneDrive - Thomas More/Documenten/Thomas more/FullStack Cloud and Devops/FastAPIProject",
     "node.js.detected.package.eslint": "true",
@@ -108,6 +86,7 @@
       <workItem from="1766841702983" duration="1256000" />
       <workItem from="1766843009552" duration="1189000" />
       <workItem from="1767001565707" duration="7610000" />
+      <workItem from="1767100552369" duration="299000" />
     </task>
     <servers />
   </component>
