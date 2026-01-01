@@ -1,7 +1,8 @@
 FROM python:3.11-slim
 
 # Installeer Git voor GitHub repository cloning
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+## Installeer Docker CLI voor logs en debugging
+RUN apt-get update && apt-get install -y git docker.io && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
