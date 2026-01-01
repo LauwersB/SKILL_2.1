@@ -87,8 +87,37 @@ What is does:
 **6. The API layer**
 
 - endpoints:
-  - POST /deploy/full-stack: calls *generate_full_deployment(app_id, source_path) and returns compose + ports
-  - POST /detect/only: calls detector directly
+  - POST /deploy/full-stack  
+    Generates a full docker-compose deployment for an app and stores metadata.
+  - POST /detect/only  
+    Runs application detection without generating a deployment.
+  - GET /apps  
+    Lists currently running deployed apps (derived from running containers).
+  - GET /apps/{app_id}/logs  
+    Fetches logs for a deployed app or database container (debugging).
+
+**6.1 Debugging & Logs**
+
+The platform exposes read-only endpoints to help developers debug running deployments
+without executing into containers.
+
+- List running apps:
+  curl http://localhost:8080/apps
+
+- Fetch application logs:
+  curl "http://localhost:8080/apps/<app_id>/logs?tail=50"
+
+- Fetch database logs:
+  curl "http://localhost:8080/apps/<app_id>/logs?service=database&tail=50"
+
+- Plain text output (recommended for terminals):
+  curl "http://localhost:8080/apps/<app_id>/logs?format=raw"
+
+Supported query parameters:
+- tail: number of log lines (default: 200)
+- since: Docker duration (e.g. 10m, 1h)
+- q: simple text filter
+- format: json | raw
 
 **7. Overview functions per service/**
 
