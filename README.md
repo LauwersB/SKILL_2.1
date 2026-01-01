@@ -189,8 +189,32 @@ platform database so the system can track what was generated for which `app_id`.
 |--------|------------|
 | `save_provision_record(app_id, db_name, db_user, db_password, db_port, container_id) -> None` | Connects to platform PostgreSQL using values from `config.py`, creates `provisions` table if missing, and upserts a record keyed by `app_id`. |
 
+<u>services/logs.py</u>
 
+This module provides **read-only log access** for running containers.
+It hides Docker-specific commands behind a small helper so the API layer
+remains portable (e.g. Kubernetes later).
 
+| Function | Description |
+|--------|------------|
+| `get_container_logs(app_id, service="app", tail=200, since=None, query=None) -> str` | Fetches logs from a running container (`<app_id>-app` or `<app_id>-db`) using Docker. Supports tailing, time filtering, and simple text search. Raises clear errors if containers are missing. |
+
+Used by:
+- `GET /apps/{app_id}/logs`
+
+<u>services/apps.py</u>
+
+This module provides **runtime introspection** of deployed applications.
+It derives state from running containers and combines it with stored
+platform metadata.
+
+| Function | Description                                                                                                                                                            |
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `list_running_apps() -> List[Dict]` | Lists running applications by inspecting container names (`<app_id>-app`, `<app_id>-db`). Returns which services are running, the externally exposed application port. |
+| `_get_web_ports() -> Dict[str, int]` | Best-effort helper that reads application ports from the platform database (`provisions.web_port`). Never raises errors to keep debugging endpoints stable.            |
+
+Used by:
+- `GET /apps`
 
 
 
