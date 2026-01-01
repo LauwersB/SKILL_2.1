@@ -11,11 +11,10 @@ import config
 logger = logging.getLogger(__name__)
 
 
-def save_provision_record(app_id, db_name, db_user, db_password, db_port, container_id):
-    """Sla provision record op in platform database met gebruik van centrale config."""
+def save_provision_record(app_id, db_name, db_user, db_password, db_port, container_id, web_port):
+    """Sla provision record op in platform database."""
     conn = None
     try:
-        # We gebruiken nu de namen die jij in config.py hebt gedefinieerd
         conn = psycopg2.connect(
             host=config.db_host,
             user=config.username,
@@ -23,37 +22,34 @@ def save_provision_record(app_id, db_name, db_user, db_password, db_port, contai
             dbname=config.db_name,
             connect_timeout=5
         )
-
         cur = conn.cursor()
 
-        # 1. Tabel aanmaken als deze nog niet bestaat
         cur.execute("""
             CREATE TABLE IF NOT EXISTS provisions (
                 id SERIAL PRIMARY KEY,
                 app_id VARCHAR(255) UNIQUE NOT NULL,
-                db_name VARCHAR(255) ,
-                db_user VARCHAR(255) ,
-                db_password VARCHAR(255) ,
-                db_port INTEGER ,
-                web_port INTEGER ,
-                container_id VARCHAR(255) ,
+                db_name VARCHAR(255),
+                db_user VARCHAR(255),
+                db_password VARCHAR(255),
+                db_port INTEGER,
+                web_port INTEGER,
+                container_id VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
-        # 2. Record invoegen of bijwerken (Upsert)
-        # Dit voorkomt 'Unique Violation' errors als je een app her-deploys
+        # FIX: 7 kolommen = 7 placeholders (%s)
         cur.execute("""
-            INSERT INTO provisions (app_id, db_name, db_user, db_password, db_port, container_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO provisions (app_id, db_name, db_user, db_password, db_port, container_id, web_port)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (app_id) DO UPDATE SET
                 db_name = EXCLUDED.db_name,
                 db_user = EXCLUDED.db_user,
                 db_password = EXCLUDED.db_password,
                 db_port = EXCLUDED.db_port,
+                web_port = EXCLUDED.web_port,
                 container_id = EXCLUDED.container_id;
-        """, (app_id, db_name, db_user, db_password, db_port, container_id))
-
+        """, (app_id, db_name, db_user, db_password, db_port, container_id, web_port))
         conn.commit()
         cur.close()
         logger.info(f"Provision record succesvol verwerkt voor app_id: {app_id}")

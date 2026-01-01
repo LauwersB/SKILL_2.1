@@ -94,7 +94,6 @@ def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Di
             "restart": "unless-stopped"
         }
 
-        # Maartens Fix: Automatisch SQL inladen als database.sql bestaat
         if (Path(source_path) / "database.sql").exists():
             db_service["volumes"] = [
                 "../source/database.sql:/docker-entrypoint-initdb.d/init.sql:ro"
@@ -159,7 +158,8 @@ def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Di
             db_user=db_info["db_user"] if db_info else None,
             db_password=db_info["db_password"] if db_info else None,
             db_port=db_info["db_port"] if db_info else 0,
-            container_id="pending"
+            container_id="pending",
+            web_port=web_port
         )
     except Exception as e:
         logger.critical(f"Administratie fout: {e}")
