@@ -5,7 +5,7 @@ Deze manual legt stap-voor-stap uit **hoe het platform praktisch werkt**, hoe ee
 
 ## Happy Path
 
-bash ./scripts/start_project.sh klantnaam "`github url`"
+bash ./scripts/start_project.sh klantnaam "https://github.com/maarten-wils/crud-php-mysql-simple.git"
 
 Dit script:
 
@@ -62,5 +62,6 @@ _Step D - Start the generated stack_
 _Step E - Verify in browser_
 
 Open http://localhost:<web port> (the port is returned by /deploy/full-stack)
+
 
 
