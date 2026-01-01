@@ -13,7 +13,6 @@ services:
     volumes:
        - /var/run/docker.sock:/var/run/docker.sock
        - ./clients:/app/clients
-       - ./deployments:/app/deployments
     depends_on:
       - platform-db
 

@@ -23,10 +23,17 @@ KLANT=$3
 PROJECT_NAME=$(basename "$SOURCE_LOCATION" .git)
 
 # 2. Doelmap bepalen
-TARGET_DIR="$CLIENTS_ROOT/$KLANT/$PROJECT_NAME/source"
-mkdir -p "$(dirname "$TARGET_DIR")"
+# PROJECT_ROOT is bijv: .../clients/bla/crud-php-mysql-simple
+PROJECT_ROOT="$CLIENTS_ROOT/$KLANT/$PROJECT_NAME"
+TARGET_DIR="$PROJECT_ROOT/source"
 
-log_message "Start inname voor $PROJECT_NAME (Klant: $KLANT)"
+# FIX: Maak de hele boomstructuur aan in één keer
+# Als de map al bestaat maar een raar bestand is, verwijder het dan eerst
+if [ -e "$PROJECT_ROOT" ] && [ ! -d "$PROJECT_ROOT" ]; then
+    rm -f "$PROJECT_ROOT"
+fi
+
+mkdir -p "$TARGET_DIR"
 
 # 3. Inlezen
 case $SOURCE_TYPE in

@@ -14,4 +14,4 @@ username = os.getenv("PLATFORM_DB_USER", "username")
 password = os.getenv("PLATFORM_DB_PASSWORD", "password")
 
 # Pad naar de staging voor de scripts
-staging_root = os.getenv("STAGING_ROOT", "/tmp/poc-deployments")
+staging_root = os.getenv("STAGING_ROOT", "/app/clients")
