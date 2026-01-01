@@ -4,7 +4,7 @@
 KLANTNAAM=$1
 PROJECTNAAM=$2
 STACK_NAAM="${KLANTNAAM}_${PROJECTNAAM}"
-PROJECT_PAD="./clients/${KLANTNAAM}/${PROJECTNAAM}"
+PROJECT_PAD="$(pwd)/clients/${KLANTNAAM}/${PROJECTNAAM}"
 
 # Controle of argumenten aanwezig zijn
 if [ -z "$1" ] || [ -z "$2" ]; then
@@ -31,10 +31,25 @@ else
     exit 1
 fi
 
-# 3. Projectmap verwijderen
-echo "Stap 2: Bestanden verwijderen in $PROJECT_PAD..."
+# 3. Database record verwijderen uit de platform database
+echo "Stap 2: Record verwijderen uit platform database (app_id: $APP_ID)..."
+
+# We voeren het SQL commando direct uit via de platform-db container
+docker exec skill_21-platform-db-1 psql -U platform -d platform -c "DELETE FROM provisions WHERE app_id = '$STACK_NAAM';" > /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "Succes: Record verwijderd uit de database."
+else
+    echo "Fout: Kon record niet verwijderen uit de database (is de platform-db container online?)"
+fi
+
+# 4. Projectmap verwijderen
+echo "Stap 3: Bestanden verwijderen in $PROJECT_PAD..."
 if [ -d "$PROJECT_PAD" ]; then
-    rm -rf "$PROJECT_PAD"
+   docker run --rm \
+      -v "$(pwd)/clients:/cleanup" \
+      alpine \
+      rm -rf "/cleanup/${KLANTNAAM}/${PROJECTNAAM}"
 
     # Controleren of de map echt weg is
     if [ ! -d "$PROJECT_PAD" ]; then
