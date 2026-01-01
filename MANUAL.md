@@ -15,6 +15,18 @@ Dit script:
 - maakt een docker-compose stack
 - start de applicatie
 
+bash .scripts/stop_container.sh 'klantnaam' 'projectnaam'
+
+- stopt de compose stack (alle containers) van het project (indien website tijdelijk offline moet)
+
+bash .scripts/verwijder_project.sh 'klantnaam' 'projectnaam'
+
+- verwijderd alle containers, docker images en gekoppelde volumes 
+-  verifierd of stack weg is
+- verwijderd de record uit de platform_db
+- verwijderd de projectmap met alle bestanden
+- verifierd of alle bestanden weg zijn
+
 👉 Gebruik dit als alles “gewoon moet werken”.
 
 👉 Voorbeeld PHP + MySQL repo: https://github.com/maarten-wils/crud-php-mysql-simple.git
