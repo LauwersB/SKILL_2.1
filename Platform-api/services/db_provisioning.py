@@ -10,8 +10,11 @@ import config
 
 logger = logging.getLogger(__name__)
 
+PASSWORD_LENGTH = 24
+PORT_RANGE_START = 3000
+PORT_RANGE_END = 9000
 
-def _find_free_port(start_port=8081, end_port=9000):
+def _find_free_port(start_port=PORT_RANGE_START, end_port=PORT_RANGE_END):
     """
     Bepaalt de eerstvolgende vrije poort op basis van de database historie.
     """
