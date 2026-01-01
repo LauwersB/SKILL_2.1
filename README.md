@@ -25,13 +25,29 @@ The platform-api gets Docker socket access and mounts ./clients into the contain
 - the API container can write generated compose files into `/app/clients/name_client/name_project/deployment`
 - platform-db listens on host port 5433
 
-**1. The start_project script**
+**1.scripts
 
--./scripts/start_project.sh "<client_name>" "<github_repo_link>"
-- starts the ingest_app script
-- uses the api to generate a docker-compose file
-- starts the compose-stack 
-- controle if containers has started and info is added to platform_db
+- The start_project script**
+
+  - ./scripts/start_project.sh "<client_name>" "<github_repo_link>"
+  - starts the ingest_app script
+  - uses the api to generate a docker-compose file
+  - starts the compose-stack 
+  - controle if containers has started and info is added to platform_db
+  
+- The stop container script**
+
+  - bash .scripts/stop_container.sh 'klantnaam' 'projectnaam'
+  - stopt de compose stack (alle containers) van het project (indien website tijdelijk offline moet)
+
+- the verwijder project script**
+
+  - bash .scripts/verwijder_project.sh 'klantnaam' 'projectnaam'
+  - verwijderd alle containers, docker images en gekoppelde volumes 
+  -  verifierd of stack weg is
+  - verwijderd de record uit de platform_db
+  - verwijderd de projectmap met alle bestanden
+  - verifierd of alle bestanden weg zijn
 
 **2. Step 1: Ingest**
 
