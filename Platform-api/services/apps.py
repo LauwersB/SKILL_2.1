@@ -61,10 +61,27 @@ def list_running_apps() -> List[Dict[str, object]]:
     # make it stable & readable
     result = []
     for app_id in sorted(apps.keys()):
+        # app_id format: "<client>_<project>" (split on first underscore only)
+        if "_" in app_id:
+            client, project = app_id.split("_", 1)
+        else:
+            client, project = None, app_id  # fallback: treat whole as project
+
         result.append({
-            "app_id": app_id,
-            "services": apps[app_id],
-            "app_port": ports.get(app_id)
+            "app_id": {
+                "full": app_id,
+                "client": client,
+                "project": project
+            },
+            "services": {
+                "app": {
+                    "running": apps[app_id].get("app", False),
+                    "port": ports.get(app_id)
+                },
+                "database": {
+                    "running": apps[app_id].get("database", False)
+                }
+            }
         })
     return result
 
