@@ -111,6 +111,9 @@ What is does:
     Lists currently running deployed apps (derived from running containers).
   - GET /apps/{app_id}/logs  
     Fetches logs for a deployed app or database container (debugging).
+  - GET /containers
+  
+    Shows container overview (status/uptime/restarts/health), similar to `docker ps` + `inspect`
 
 **6.1 Debugging & Logs**
 
