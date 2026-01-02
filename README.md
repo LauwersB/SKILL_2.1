@@ -111,9 +111,10 @@ What is does:
     Lists currently running deployed apps (derived from running containers).
   - GET /apps/{app_id}/logs  
     Fetches logs for a deployed app or database container (debugging).
-  - GET /containers
+  - GET /containers 
   
-    Shows container overview (status/uptime/restarts/health), similar to `docker ps` + `inspect`
+    Shows an overview of containers (name/image/state/status/uptime-ish, started_at, restart_count, health if available) and basic resource usage (CPU%, memory).
+  
 
 **6.1 Debugging & Logs**
 
@@ -234,6 +235,18 @@ platform metadata.
 
 Used by:
 - `GET /apps`
+
+---
+
+<u>services/containers.py</u>
+
+Provides container status overview for debugging (similar to `docker ps` + `docker inspect` + `docker stats`).
+
+| Function | Description |
+|--------|------------|
+| `list_containers(all_containers: bool = True) -> List[Dict[str, object]]` | Lists containers with name/image/state/status/created_at and enriches with started_at, restart_count, health, plus basic CPU/memory stats. |
+| `get_container_stats() -> dict` | Reads CPU% and memory usage per container using `docker stats --no-stream`. |
+
 
 
 

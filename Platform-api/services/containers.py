@@ -13,6 +13,28 @@ def _run(cmd: List[str]) -> subprocess.CompletedProcess:
     except FileNotFoundError as e:
         raise ContainerProviderError("Docker CLI not found. Is Docker installed and on PATH?") from e
 
+def get_container_stats() -> dict:
+    """
+    Returns dict: container_name -> stats dict
+    Uses 'docker stats --no-stream' for basic CPU/mem metrics.
+    """
+    fmt = "{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}"
+    proc = _run(["docker", "stats", "--no-stream", "--format", fmt])
+    if proc.returncode != 0:
+        return {}
+
+    stats = {}
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        name, cpu, mem_usage, mem_perc = line.split("|", 3)
+        stats[name] = {
+            "cpu_percent": cpu,
+            "mem_usage": mem_usage,
+            "mem_percent": mem_perc,
+        }
+    return stats
 
 def list_containers(all_containers: bool = True) -> List[Dict[str, object]]:
     """
@@ -39,6 +61,8 @@ def list_containers(all_containers: bool = True) -> List[Dict[str, object]]:
     results: List[Dict[str, object]] = []
 
     # Enrich each container with inspect fields (StartedAt, RestartCount, Health)
+    stats = get_container_stats()
+
     for row in rows:
         name, image, status, state, created_at = row.split("|", 4)
 
@@ -62,6 +86,8 @@ def list_containers(all_containers: bool = True) -> List[Dict[str, object]]:
                     restart_count = None
                 health = parts[2] or "none"
 
+        container_stats = stats.get(name, {})
+
         results.append({
             "name": name,
             "image": image,
@@ -70,7 +96,10 @@ def list_containers(all_containers: bool = True) -> List[Dict[str, object]]:
             "created_at": created_at,
             "started_at": started_at,
             "restart_count": restart_count,
-            "health": health
+            "health": health,
+            "cpu_percent": container_stats.get("cpu_percent"),
+            "mem_usage": container_stats.get("mem_usage"),
+            "mem_percent": container_stats.get("mem_percent"),
         })
 
     return results
