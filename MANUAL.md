@@ -74,8 +74,12 @@ _Step D - Start the generated stack_
 _Step E - Verify in browser_
 
 - Open http://localhost:<web port> (the port is returned by /deploy/full-stack)
+
+_Debugging and verification_
+
 - Use http://localhost:8080/apps to list running deployments
 - Use /apps/{app_id}/logs to inspect container logs for debugging
+- Use http://localhost:8080/containers to inspect all containers (status, uptime, restarts, health, resource usage)
 
 
 
