@@ -8,6 +8,7 @@ from services.app_detector import detect_application_type
 from services.deployer import generate_full_deployment
 from services.logs import get_container_logs, LogProviderError
 from services.apps import list_running_apps
+from services.containers import list_containers, ContainerProviderError
 from services.db_init import init_platform_db
 
 # algemene logging
@@ -116,3 +117,12 @@ def logs(
 @app.get("/apps")
 def apps():
     return {"apps": list_running_apps()}
+
+## Endpoint that lists running containers
+
+@app.get("/containers")
+def containers(all: bool = True):
+    try:
+        return {"containers": list_containers(all_containers=all)}
+    except ContainerProviderError as e:
+        raise HTTPException(status_code=500, detail=str(e))
