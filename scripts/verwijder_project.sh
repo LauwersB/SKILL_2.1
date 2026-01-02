@@ -46,10 +46,10 @@ fi
 # 4. Projectmap verwijderen
 echo "Stap 3: Bestanden verwijderen in $PROJECT_PAD..."
 if [ -d "$PROJECT_PAD" ]; then
-   docker run --rm \
-      -v "$(pwd)/clients:/cleanup" \
+  MSYS_NO_PATHCONV=1 docker run --rm \
+      -v "$(pwd)/clients://cleanup" \
       alpine \
-      rm -rf "/cleanup/${KLANTNAAM}/${PROJECTNAAM}"
+      rm -rf "//cleanup/${KLANTNAAM}/${PROJECTNAAM}"
 
     # Controleren of de map echt weg is
     if [ ! -d "$PROJECT_PAD" ]; then

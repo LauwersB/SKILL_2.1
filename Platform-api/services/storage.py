@@ -11,7 +11,7 @@ import config
 logger = logging.getLogger(__name__)
 
 
-def save_provision_record(app_id, db_name, db_user, db_password, db_port, container_id, web_port):
+def save_provision_record(app_id, db_name, db_user, db_password, db_port, container_id, web_port, user_id):
     """Sla provision record op in platform database."""
     conn = None
     try:
@@ -27,6 +27,7 @@ def save_provision_record(app_id, db_name, db_user, db_password, db_port, contai
         cur.execute("""
             CREATE TABLE IF NOT EXISTS provisions (
                 id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
                 app_id VARCHAR(255) UNIQUE NOT NULL,
                 db_name VARCHAR(255),
                 db_user VARCHAR(255),
@@ -35,21 +36,21 @@ def save_provision_record(app_id, db_name, db_user, db_password, db_port, contai
                 web_port INTEGER,
                 container_id VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+            );
         """)
 
-        # FIX: 7 kolommen = 7 placeholders (%s)
         cur.execute("""
-            INSERT INTO provisions (app_id, db_name, db_user, db_password, db_port, container_id, web_port)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO provisions (app_id, db_name, db_user, db_password, db_port, container_id, web_port, user_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (app_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
                 db_name = EXCLUDED.db_name,
                 db_user = EXCLUDED.db_user,
                 db_password = EXCLUDED.db_password,
                 db_port = EXCLUDED.db_port,
                 web_port = EXCLUDED.web_port,
                 container_id = EXCLUDED.container_id;
-        """, (app_id, db_name, db_user, db_password, db_port, container_id, web_port))
+        """, (app_id, db_name, db_user, db_password, db_port, container_id, web_port, user_id))
         conn.commit()
         cur.close()
         logger.info(f"Provision record succesvol verwerkt voor app_id: {app_id}")

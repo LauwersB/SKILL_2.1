@@ -3,24 +3,35 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi import HTTPException ## debugging and logs
 from fastapi.responses import PlainTextResponse ## debugging and logs
 from pydantic import BaseModel
+from contextlib import asynccontextmanager
 from services.app_detector import detect_application_type
 from services.deployer import generate_full_deployment
-from services.storage import save_provision_record
 from services.logs import get_container_logs, LogProviderError
 from services.apps import list_running_apps
+from services.db_init import init_platform_db
 
 # algemene logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Alles hierboven gebeurt bij OPSTARTEN
+    print("API start op, database controleren...")
+    init_platform_db()
+    yield
+    # Alles hieronder gebeurt bij AFSLUITEN
+    print("API sluit af...")
+
+app = FastAPI(lifespan=lifespan)
 
 
-# bij het aanroepen van de API moet er een projectnaam en path meegegeven worden
+# bij het aanroepen van de API moet er een projectnaam, path en user_id meegegeven worden
 class DeployRequest(BaseModel):
     app_id: str
     source_path: str
+    user_id: int
 
 
 # Start van de deployment. als deze endpoint opgeroepen wordt zal de applicatie gescand worden,
@@ -28,7 +39,7 @@ class DeployRequest(BaseModel):
 @app.post("/deploy/full-stack")
 def deploy_app(req: DeployRequest):
     # 1. Genereer de configuratie
-    config_info = generate_full_deployment(req.app_id, req.source_path)
+    config_info = generate_full_deployment(req.app_id, req.source_path, req.user_id)
 
     # 2. Controleer of de functie überhaupt iets heeft teruggegeven
     if not config_info:
