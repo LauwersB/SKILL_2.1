@@ -103,8 +103,37 @@ What is does:
 **6. The API layer**
 
 - endpoints:
-  - POST /deploy/full-stack: calls *generate_full_deployment(app_id, source_path) and returns compose + ports
-  - POST /detect/only: calls detector directly
+  - POST /deploy/full-stack  
+    Generates a full docker-compose deployment for an app and stores metadata.
+  - POST /detect/only  
+    Runs application detection without generating a deployment.
+  - GET /apps  
+    Lists currently running deployed apps (derived from running containers).
+  - GET /apps/{app_id}/logs  
+    Fetches logs for a deployed app or database container (debugging).
+
+**6.1 Debugging & Logs**
+
+The platform exposes read-only endpoints to help developers debug running deployments
+without executing into containers.
+
+- List running apps:
+  curl http://localhost:8080/apps
+
+- Fetch application logs:
+  curl "http://localhost:8080/apps/<app_id>/logs?tail=50"
+
+- Fetch database logs:
+  curl "http://localhost:8080/apps/<app_id>/logs?service=database&tail=50"
+
+- Plain text output (recommended for terminals):
+  curl "http://localhost:8080/apps/<app_id>/logs?format=raw"
+
+Supported query parameters:
+- tail: number of log lines (default: 200)
+- since: Docker duration (e.g. 10m, 1h)
+- q: simple text filter
+- format: json | raw
 
 **7. Overview functions per service/**
 
@@ -176,8 +205,32 @@ platform database so the system can track what was generated for which `app_id`.
 |--------|------------|
 | `save_provision_record(app_id, db_name, db_user, db_password, db_port, container_id) -> None` | Connects to platform PostgreSQL using values from `config.py`, creates `provisions` table if missing, and upserts a record keyed by `app_id`. |
 
+<u>services/logs.py</u>
 
+This module provides **read-only log access** for running containers.
+It hides Docker-specific commands behind a small helper so the API layer
+remains portable (e.g. Kubernetes later).
 
+| Function | Description |
+|--------|------------|
+| `get_container_logs(app_id, service="app", tail=200, since=None, query=None) -> str` | Fetches logs from a running container (`<app_id>-app` or `<app_id>-db`) using Docker. Supports tailing, time filtering, and simple text search. Raises clear errors if containers are missing. |
+
+Used by:
+- `GET /apps/{app_id}/logs`
+
+<u>services/apps.py</u>
+
+This module provides **runtime introspection** of deployed applications.
+It derives state from running containers and combines it with stored
+platform metadata.
+
+| Function | Description                                                                                                                                                            |
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `list_running_apps() -> List[Dict]` | Lists running applications by inspecting container names (`<app_id>-app`, `<app_id>-db`). Returns which services are running, the externally exposed application port. |
+| `_get_web_ports() -> Dict[str, int]` | Best-effort helper that reads application ports from the platform database (`provisions.web_port`). Never raises errors to keep debugging endpoints stable.            |
+
+Used by:
+- `GET /apps`
 
 
 
