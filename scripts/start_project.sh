@@ -7,6 +7,15 @@ PLATFORM_DB_CONTAINER="skill_21-platform-db-1"
 
 KLANT=$1
 GITHUB_URL=$2
+USER_ID=$(docker exec -i "$PLATFORM_DB_CONTAINER" psql -U platform -d platform -t -A -c "SELECT id FROM users WHERE client_name='$KLANT' LIMIT 1;")
+
+# Controleer of er wel een ID gevonden is
+if [ -z "$USER_ID" ]; then
+    echo "ERROR: Geen user_id gevonden voor klant '$KLANT'. Bestaat deze klant wel in de 'users' tabel?"
+    exit 1
+fi
+
+echo "Gevonden User ID: $USER_ID"
 
 if [ "$#" -lt 2 ]; then
     echo "Gebruik: $0 <klantnaam> <github_url>"
@@ -31,11 +40,11 @@ fi
 # 2. Vertaal naar API pad
 API_PATH="/app/clients/$KLANT/$PROJECT_NAME/source"
 
-# 3. API Aanspreken
+# --- 3. API Aanspreken ---
 echo "[2/4] API configureren..."
 RESPONSE=$(curl -s -X POST "$API_URL" \
      -H "Content-Type: application/json" \
-     -d "{\"app_id\": \"$APP_ID\", \"source_path\": \"$API_PATH\"}")
+     -d "{\"app_id\": \"$APP_ID\", \"source_path\": \"$API_PATH\", \"user_id\": $USER_ID}")
 
 # 4. Docker-compose opstarten
 # Gebruik nu de PROJECT_NAME variabele voor het juiste pad

@@ -70,7 +70,7 @@ def _write_app_dockerfile(app_id: str, source_path: str):
     with open(dockerfile_path, 'w', encoding="utf-8") as f:
         f.write(content)
 
-def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Dict], Optional[int], Optional[int]]:
+def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tuple[Optional[Dict], Optional[int], Optional[int]]:
     detection = detect_application_type(source_path)
     if "error" in detection:
         logger.error(f"Analyse mislukt voor {app_id}: {detection['error']}")
@@ -159,7 +159,8 @@ def generate_full_deployment(app_id: str, source_path: str) -> Tuple[Optional[Di
             db_password=db_info["db_password"] if db_info else None,
             db_port=db_info["db_port"] if db_info else 0,
             container_id="pending",
-            web_port=web_port
+            web_port=web_port,
+            user_id=user_id
         )
     except Exception as e:
         logger.critical(f"Administratie fout: {e}")

@@ -13,5 +13,6 @@ db_name = os.getenv("PLATFORM_DB_NAME", "dbname")
 username = os.getenv("PLATFORM_DB_USER", "username")
 password = os.getenv("PLATFORM_DB_PASSWORD", "password")
 
-# Pad naar de staging voor de scripts
-staging_root = os.getenv("STAGING_ROOT", "/app/clients")
+# Credentials platform_admin
+admin_user = os.getenv("PLATFORM_ADMIN_USERNAME", "admin")
+admin_pass = os.getenv("PLATFORM_ADMIN_PASSWORD", "admin")
