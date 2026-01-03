@@ -1,7 +1,7 @@
-
 This README represents the current global view of the system.
 
-To keep it accurate for everyone, please document any workflow changes here, including new endpoints, services, functions, or significant functional changes.
+To keep it accurate for everyone, please document any workflow changes here, including new endpoints, services,
+functions, or significant functional changes.
 
 **0 What we're building**
 
@@ -29,29 +29,30 @@ The platform-api gets Docker socket access and mounts ./clients into the contain
 
 - The start_project script**
 
-  - ./scripts/start_project.sh "<client_name>" "<github_repo_link>"
-  - starts the ingest_app script
-  - uses the api to generate a docker-compose file
-  - starts the compose-stack 
-  - controle if containers has started and info is added to platform_db
-  
+    - ./scripts/start_project.sh "<client_name>" "<github_repo_link>"
+    - starts the ingest_app script
+    - uses the api to generate a docker-compose file
+    - starts the compose-stack
+    - controle if containers has started and info is added to platform_db
+
 - The stop container script**
 
-  - bash .scripts/stop_container.sh 'klantnaam' 'projectnaam'
-  - stopt de compose stack (alle containers) van het project (indien website tijdelijk offline moet)
+    - bash .scripts/stop_container.sh 'klantnaam' 'projectnaam'
+    - stopt de compose stack (alle containers) van het project (indien website tijdelijk offline moet)
 
 - the verwijder project script**
 
-  - bash .scripts/verwijder_project.sh 'klantnaam' 'projectnaam'
-  - verwijderd alle containers, docker images en gekoppelde volumes 
-  -  verifierd of stack weg is
-  - verwijderd de record uit de platform_db
-  - verwijderd de projectmap met alle bestanden
-  - verifierd of alle bestanden weg zijn
+    - bash .scripts/verwijder_project.sh 'klantnaam' 'projectnaam'
+    - verwijderd alle containers, docker images en gekoppelde volumes
+    - verifierd of stack weg is
+    - verwijderd de record uit de platform_db
+    - verwijderd de projectmap met alle bestanden
+    - verifierd of alle bestanden weg zijn
 
 **2. Step 1: Ingest**
 
 The ingest module is scripts/ingest_app.sh. What it does:
+
 - takes: local <path> or git <url>
 - copies/clones into: `/app/clients/name_client/name_project/source/<appName>`
 - sets permissions: chmod -R 755 <target_dir>
@@ -83,9 +84,9 @@ What it does:
 - calls the detector on source_path
 - builds a per-app network name: net_<app_id>
 - if a db container is detected, it:
-  - picks a free web port (starting from 8081)
-  - mounts the source folder into `/var/www/html`
-  - injects db env vars if db exists (DB_HOST, DB_NAME etc.)
+    - picks a free web port (starting from 8081)
+    - mounts the source folder into `/var/www/html`
+    - injects db env vars if db exists (DB_HOST, DB_NAME etc.)
 - writes compose to `app/deployments/<app_id>/docker-compose.yml`
 - if PHP is detected, writes Dockerfile to `app/deployments/<app_id>/Dockerfile.app`
 - stores metadata in the platform db with container_id="pending"
@@ -98,23 +99,28 @@ What is does:
 
 - connects to PostgresQL using values from config.py (PLATFORM_DB_*)
 - creates a provisions table if missing
-- upserts by app_id 
+- upserts by app_id
 
 **6. The API layer**
 
 - endpoints:
-  - POST /deploy/full-stack  
-    Generates a full docker-compose deployment for an app and stores metadata.
-  - POST /detect/only  
-    Runs application detection without generating a deployment.
-  - GET /apps  
-    Lists currently running deployed apps (derived from running containers).
-  - GET /apps/{app_id}/logs  
-    Fetches logs for a deployed app or database container (debugging).
-  - GET /containers 
-  
-    Shows an overview of containers (name/image/state/status/uptime-ish, started_at, restart_count, health if available) and basic resource usage (CPU%, memory).
-  
+    - POST /deploy/full-stack  
+      Generates a full docker-compose deployment for an app and stores metadata.
+    - POST /detect/only  
+      Runs application detection without generating a deployment.
+    - GET /apps  
+      Lists currently running deployed apps (derived from running containers).
+    - GET /apps/{app_id}/logs  
+      Fetches logs for a deployed app or database container (debugging).
+    - GET /containers
+
+      Shows an overview of containers (name/image/state/status/uptime-ish, started_at, restart_count, health if
+      available) and basic resource usage (CPU%, memory).
+    - GET /containers/{app_id}
+
+      Returns container status and resource usage for a single application. Matches containers by name prefix:
+      - `{app_id}-app`
+      - `{app_id}-db`
 
 **6.1 Debugging & Logs**
 
@@ -134,6 +140,7 @@ without executing into containers.
   curl "http://localhost:8080/apps/<app_id>/logs?format=raw"
 
 Supported query parameters:
+
 - tail: number of log lines (default: 200)
 - since: Docker duration (e.g. 10m, 1h)
 - q: simple text filter
@@ -155,17 +162,16 @@ High-level flow:
 This module is the **analysis step**: it scans a source folder and returns a
 structured detection result used by the deployer.
 
-
-| Function | Description |
-|--------|------------|
-| `detect_application_type(source_path: str) -> Dict` | Validates input, calls `_analyze_directory()`, ensures output has expected containers: `{web, api, db}`, logs. |
-| `_analyze_directory(directory: str) -> Dict` | Core scanner: walks directory, collects "evidence" files/extensions, builds a results dict. |
-| `_detect_nodejs_frameworks(files: List[str], results: Dict) -> None` | Detects common Node frameworks (based on markers like dependencies/config patterns) and adds those to detected frameworks. |
-| `_detect_python_frameworks(files: List[str], results: Dict) -> None` | Same idea as above but for Python. |
-| `_detect_databases(app_type: str, directory: str, results: Dict) -> None` | Same idea as above but for database — populates `detected_databases` and `containers['db']` with recommended DB images. |
-| `_get_runtime_image(app_type: str, runtime: str) -> str` | Returns Docker image for runtime when relevant. |
-| `_get_web_server_image(web_server: str) -> str` | Returns Docker image for web server layer. |
-| `_get_database_image(db_type: str) -> str` | Maps database types to images. |
+| Function                                                                  | Description                                                                                                                |
+|---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| `detect_application_type(source_path: str) -> Dict`                       | Validates input, calls `_analyze_directory()`, ensures output has expected containers: `{web, api, db}`, logs.             |
+| `_analyze_directory(directory: str) -> Dict`                              | Core scanner: walks directory, collects "evidence" files/extensions, builds a results dict.                                |
+| `_detect_nodejs_frameworks(files: List[str], results: Dict) -> None`      | Detects common Node frameworks (based on markers like dependencies/config patterns) and adds those to detected frameworks. |
+| `_detect_python_frameworks(files: List[str], results: Dict) -> None`      | Same idea as above but for Python.                                                                                         |
+| `_detect_databases(app_type: str, directory: str, results: Dict) -> None` | Same idea as above but for database — populates `detected_databases` and `containers['db']` with recommended DB images.    |
+| `_get_runtime_image(app_type: str, runtime: str) -> str`                  | Returns Docker image for runtime when relevant.                                                                            |
+| `_get_web_server_image(web_server: str) -> str`                           | Returns Docker image for web server layer.                                                                                 |
+| `_get_database_image(db_type: str) -> str`                                | Maps database types to images.                                                                                             |
 
 ---
 
@@ -174,12 +180,11 @@ structured detection result used by the deployer.
 This module provides helpers for generating credentials and finding unused ports.
 Deployer imports helpers rather than calling `provision_database`.
 
-
-| Function | Description |
-|--------|------------|
-| `_generate_random_string(length=16) -> str` | Generates random string used for passwords/secrets. Deployer uses this to create DB passwords. |
-| `_find_free_port(start=PORT_RANGE_START, end=PORT_RANGE_END) -> int` | Scans localhost ports and returns first available one. Deployer uses this for choosing external host ports. |
-| `_provision_database(app_id: str) -> Dict` | Generator returning `db_name`, `db_user`, `db_pass`, `db_port`. In current code path deployer uses two private helpers instead. |
+| Function                                                             | Description                                                                                                                     |
+|----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `_generate_random_string(length=16) -> str`                          | Generates random string used for passwords/secrets. Deployer uses this to create DB passwords.                                  |
+| `_find_free_port(start=PORT_RANGE_START, end=PORT_RANGE_END) -> int` | Scans localhost ports and returns first available one. Deployer uses this for choosing external host ports.                     |
+| `_provision_database(app_id: str) -> Dict`                           | Generator returning `db_name`, `db_user`, `db_pass`, `db_port`. In current code path deployer uses two private helpers instead. |
 
 ---
 
@@ -188,7 +193,6 @@ Deployer imports helpers rather than calling `provision_database`.
 This module is the **orchestration layer**: takes detection output and provisioning
 helpers and produces a docker-compose definition, writes it to disk, and stores metadata.
 Called by `/deploy/full-stack`.
-
 
 | Function                                                                                       | Description                                                                                                                                                                                                                                           |
 |------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -204,9 +208,8 @@ Called by `/deploy/full-stack`.
 This module is the **platform state store**: persists provisioning records to the
 platform database so the system can track what was generated for which `app_id`.
 
-
-| Function | Description |
-|--------|------------|
+| Function                                                                                      | Description                                                                                                                                   |
+|-----------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
 | `save_provision_record(app_id, db_name, db_user, db_password, db_port, container_id) -> None` | Connects to platform PostgreSQL using values from `config.py`, creates `provisions` table if missing, and upserts a record keyed by `app_id`. |
 
 <u>services/logs.py</u>
@@ -215,11 +218,12 @@ This module provides **read-only log access** for running containers.
 It hides Docker-specific commands behind a small helper so the API layer
 remains portable (e.g. Kubernetes later).
 
-| Function | Description |
-|--------|------------|
+| Function                                                                             | Description                                                                                                                                                                                    |
+|--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `get_container_logs(app_id, service="app", tail=200, since=None, query=None) -> str` | Fetches logs from a running container (`<app_id>-app` or `<app_id>-db`) using Docker. Supports tailing, time filtering, and simple text search. Raises clear errors if containers are missing. |
 
 Used by:
+
 - `GET /apps/{app_id}/logs`
 
 <u>services/apps.py</u>
@@ -228,12 +232,13 @@ This module provides **runtime introspection** of deployed applications.
 It derives state from running containers and combines it with stored
 platform metadata.
 
-| Function | Description                                                                                                                                                            |
-|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `list_running_apps() -> List[Dict]` | Lists running applications by inspecting container names (`<app_id>-app`, `<app_id>-db`). Returns which services are running, the externally exposed application port. |
+| Function                             | Description                                                                                                                                                            |
+|--------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `list_running_apps() -> List[Dict]`  | Lists running applications by inspecting container names (`<app_id>-app`, `<app_id>-db`). Returns which services are running, the externally exposed application port. |
 | `_get_web_ports() -> Dict[str, int]` | Best-effort helper that reads application ports from the platform database (`provisions.web_port`). Never raises errors to keep debugging endpoints stable.            |
 
 Used by:
+
 - `GET /apps`
 
 ---
@@ -242,10 +247,10 @@ Used by:
 
 Provides container status overview for debugging (similar to `docker ps` + `docker inspect` + `docker stats`).
 
-| Function | Description |
-|--------|------------|
+| Function                                                                  | Description                                                                                                                                |
+|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | `list_containers(all_containers: bool = True) -> List[Dict[str, object]]` | Lists containers with name/image/state/status/created_at and enriches with started_at, restart_count, health, plus basic CPU/memory stats. |
-| `get_container_stats() -> dict` | Reads CPU% and memory usage per container using `docker stats --no-stream`. |
+| `get_container_stats() -> dict`                                           | Reads CPU% and memory usage per container using `docker stats --no-stream`.                                                                |
 
 
 
