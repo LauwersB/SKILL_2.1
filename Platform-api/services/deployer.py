@@ -64,8 +64,10 @@ def _write_app_dockerfile(app_id: str, source_path: str):
     dockerfile_path = os.path.join(deploy_path, "Dockerfile.app")
     content = (
         "FROM php:8.2-apache\n"
-        "# Install mysqli so mysqli_connect() works\n"
-        "RUN docker-php-ext-install mysqli\n"
+        "# Install curl (for healthcheck) + mysqli so mysqli_connect() works\n"
+        "RUN apt-get update && apt-get install -y curl "
+        "&& docker-php-ext-install mysqli "
+        "&& rm -rf /var/lib/apt/lists/*\n"
     )
     with open(dockerfile_path, 'w', encoding="utf-8") as f:
         f.write(content)
@@ -84,7 +86,7 @@ def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tup
     db_conts = detection.get('containers', {}).get('db', [])
     if db_conts:
         db_cfg = _prepare_db_config(app_id, db_conts[0]['type'], db_conts[0]['image'])
-        
+
         db_service = {
             "container_name": f"{app_id}-db",
             "image": db_cfg["image"],
@@ -94,6 +96,25 @@ def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tup
             "restart": "unless-stopped"
         }
 
+        ## Minimal healthcheck so Docker reports healthy/unhealthy (instead of none)
+        db_type = (db_conts[0].get("type") or "").lower()
+        if "mysql" in db_type:
+            db_service["healthcheck"] = {
+                "test": ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uadmin -p$MYSQL_PASSWORD || exit 1"],
+                "interval": "10s",
+                "timeout": "5s",
+                "retries": 10,
+                "start_period": "20s",
+            }
+        elif "postgres" in db_type:
+            db_service["healthcheck"] = {
+                "test": ["CMD-SHELL", "pg_isready -U admin -d " + db_cfg["storage_data"]["db_name"] + " || exit 1"],
+                "interval": "10s",
+                "timeout": "5s",
+                "retries": 5,
+                "start_period": "10s",
+            }
+
         if (Path(source_path) / "database.sql").exists():
             db_service["volumes"] = [
                 "../source/database.sql:/docker-entrypoint-initdb.d/init.sql:ro"
@@ -101,6 +122,7 @@ def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tup
 
         services[db_cfg["service_name"]] = db_service
         db_info = db_cfg["storage_data"]
+
 
     # 2. Web Sectie (Inclusief Maartens PHP/mysqli fix)
     web_conts = detection.get('containers', {}).get('web', [])
@@ -128,6 +150,15 @@ def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tup
             "environment": web_env,
             "networks": [network_name],
             "restart": "unless-stopped"
+        }
+
+        ## Minimal app healthcheck
+        app_service["healthcheck"] = {
+            "test": ["CMD-SHELL", "curl -sS -o /dev/null http://127.0.0.1/ || exit 1"],
+            "interval": "10s",
+            "timeout": "3s",
+            "retries": 10,
+            "start_period": "15s",
         }
 
         if is_php_app:
