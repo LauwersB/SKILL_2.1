@@ -22,9 +22,12 @@ if [ "$#" -lt 2 ]; then
     exit 1
 fi
 
-# --- FIX: Bepaal projectnaam direct uit de URL ---
-PROJECT_NAME=$(basename "$GITHUB_URL" .git)
-APP_ID="${KLANT}_${PROJECT_NAME}"
+RAW_PROJECT_NAME=$(basename "$GITHUB_URL" .git)
+# Omzetten naar kleine letters met tr
+PROJECT_NAME=$(echo "$RAW_PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
+
+# Doe hetzelfde voor de APP_ID
+APP_ID=$(echo "${KLANT}_${PROJECT_NAME}" | tr '[:upper:]' '[:lower:]')
 
 echo "--- Start Automatisatie voor Klant: $KLANT ---"
 echo "Project: $PROJECT_NAME (ID: $APP_ID)"

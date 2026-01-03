@@ -78,6 +78,8 @@ def init_platform_db():
 
         # 4. Testuser aanmaken
         create_user_if_not_exists("testuser", "123", "user", "test_client")
+        create_user_if_not_exists("testuser1", "123", "user", "test_client1")
+        create_user_if_not_exists("testuser2", "123", "user", "test_client2")
 
         conn.commit()
         cur.close()
