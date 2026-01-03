@@ -114,8 +114,12 @@ What is does:
       Fetches logs for a deployed app or database container (debugging).
     - GET /containers
 
-      Shows an overview of containers (name/image/state/status/uptime-ish, started_at, restart_count, health if
-      available) and basic resource usage (CPU%, memory).
+      Returns an overview of all containers maanged by the platform. Includes:
+      - Container state and status
+      - Uptime information
+      - Restart count
+      - CPU and memory usage
+      - Health status (when configured)
     - GET /containers/{app_id}
 
       Returns container status and resource usage for a single application. Matches containers by name prefix:
@@ -145,6 +149,24 @@ Supported query parameters:
 - since: Docker duration (e.g. 10m, 1h)
 - q: simple text filter
 - format: json | raw
+
+**6.2 Health states**
+
+The platform integrates Docker health checks to provide accurate runtime status.
+
+- Health states:
+  - healthy -> health check succeeded
+  - unhealthy -> health check failed
+  - none -> no health check defined
+
+Health is independent of container state. A container can be running but still unhealthy.
+
+Implemented checks:
+- Database containers:
+  - MySQL: 'mysqladmin ping'
+  - PostgreSQL: 'ping_isready'
+- Application containers:
+  - HTTP availability check on Apache ('curl http://127.0.0.1/')
 
 **7. Overview functions per service/**
 
