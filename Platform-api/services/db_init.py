@@ -4,8 +4,19 @@ import logging
 import config
 import time
 
-
 logger = logging.getLogger(__name__)
+
+# Geef 'cur' mee als argument zodat de functie weet welke verbinding te gebruiken
+def create_user_if_not_exists(cur, username, password, role, client_name):
+    cur.execute("SELECT id FROM users WHERE username = %s", (username,))
+    if not cur.fetchone():
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+        cur.execute("""
+                    INSERT INTO users (username, password_hash, role, client_name)
+                    VALUES (%s, %s, %s, %s)
+                    """, (username, hashed, role, client_name))
+        logger.info(f"Gebruiker '{username}' aangemaakt.")
 
 def init_platform_db():
     print("--- DB INIT: Start procedure ---")
@@ -21,31 +32,31 @@ def init_platform_db():
                 dbname=config.db_name,
                 connect_timeout=5
             )
-            break  # Verbinding gelukt, breek uit de loop
+            break
         except Exception as e:
             retries -= 1
-            print(f"--- DB INIT: Database niet bereikbaar. Pogingen over: {retries}. Fout: {e} ---")
-            if retries == 0:
-                print("--- DB INIT: Kritieke fout: Kon geen verbinding maken na 5 pogingen. ---")
-                return  # Stop de functie
-            time.sleep(3)  # Wacht 3 seconden voor de volgende poging
+            print(f"--- DB INIT: Wachten op DB... ({retries} pogingen over) ---")
+            time.sleep(3)
+
+    if not conn:
+        print("❌ Kon geen verbinding maken.")
+        return
 
     try:
         cur = conn.cursor()
 
-        # 1. Tabel voor Users/Klanten
+        # 1. Maak tabellen
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
-                role VARCHAR(20) DEFAULT 'user', -- user, developer, admin
-                client_name VARCHAR(100) NOT NULL, -- Gebruikt voor mapnaam /clients/naam
+                role VARCHAR(20) DEFAULT 'user',
+                client_name VARCHAR(100) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
 
-        # 2. Tabel voor Provisions (met FK naar users)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS provisions (
                 id SERIAL PRIMARY KEY,
@@ -61,33 +72,16 @@ def init_platform_db():
             );
         """)
 
-        # 2. Hulpfunctie voor het aanmaken van gebruikers
-        def create_user_if_not_exists(username, password, role, client_name):
-            cur.execute("SELECT id FROM users WHERE username = %s", (username,))
-            if not cur.fetchone():
-                salt = bcrypt.gensalt()
-                hashed = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
-                cur.execute("""
-                            INSERT INTO users (username, password_hash, role, client_name)
-                            VALUES (%s, %s, %s, %s)
-                            """, (username, hashed, role, client_name))
-                logger.info(f"Gebruiker '{username}' aangemaakt.")
+        # 2. Gebruik de cursor (cur) bij het aanroepen!
+        create_user_if_not_exists(cur, config.admin_user, config.admin_pass, "admin", "internal")
+        create_user_if_not_exists(cur, "testuser", "123", "user", "test_client")
 
-
-        create_user_if_not_exists(config.admin_user, config.admin_pass, "admin", "internal")
-
-        # 4. Testuser aanmaken
-        create_user_if_not_exists("testuser", "123", "user", "test_client")
-
-        conn.commit()
+        conn.commit() # Nu wordt alles pas echt opgeslagen
         cur.close()
         print("✅ Database succesvol geïnitialiseerd.")
 
     except Exception as e:
         print(f"❌ Fout bij initialiseren database: {e}")
+        if conn: conn.rollback()
     finally:
-        if conn:
-            conn.close()
-
-if __name__ == "__main__":
-    init_platform_db()
+        if conn: conn.close()

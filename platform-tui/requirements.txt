@@ -2,3 +2,4 @@ textual==0.47.1
 psycopg2-binary==2.9.9
 bcrypt==4.1.2
 requests==2.31.0
+python-dotenv==1.0.0

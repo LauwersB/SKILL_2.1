@@ -1,6 +1,5 @@
 import logging
-from fastapi import FastAPI, HTTPException, status
-from fastapi import HTTPException ## debugging and logs
+from fastapi import FastAPI, HTTPException, status, Request
 from fastapi.responses import PlainTextResponse ## debugging and logs
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
@@ -9,7 +8,7 @@ from services.deployer import generate_full_deployment
 from services.logs import get_container_logs, LogProviderError
 from services.apps import list_running_apps
 from services.containers import list_containers, ContainerProviderError
-from services.db_init import init_platform_db
+from services.db_init import init_platform_db, create_user_if_not_exists
 
 # algemene logging
 logging.basicConfig(
@@ -126,3 +125,40 @@ def containers(all: bool = True):
         return {"containers": list_containers(all_containers=all)}
     except ContainerProviderError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class UserRequest(BaseModel):
+    username: str
+    password: str
+    role: str
+    client_name: str
+
+
+@app.post("/users", status_code=201)
+async def add_user(req: UserRequest):
+    import psycopg2
+    import config
+
+    conn = None
+    try:
+        # We openen hier een verbinding specifiek voor dit verzoek
+        conn = psycopg2.connect(
+            host=config.db_host,
+            user=config.username,
+            password=config.password,
+            dbname=config.db_name
+        )
+        cur = conn.cursor()
+
+        # Roep je functie aan uit db_init (die nu cur als argument verwacht)
+        create_user_if_not_exists(cur, req.username, req.password, req.role, req.client_name)
+
+        conn.commit()
+        cur.close()
+        return {"message": f"Gebruiker {req.username} succesvol aangemaakt"}
+
+    except Exception as e:
+        if conn: conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn: conn.close()
