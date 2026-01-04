@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "$0")/.."
+
 # 1. Variabelen ophalen
 KLANTNAAM=$1
 PROJECTNAAM=$2
@@ -45,11 +47,12 @@ fi
 
 # 4. Projectmap verwijderen
 echo "Stap 3: Bestanden verwijderen in $PROJECT_PAD..."
-if [ -d "$PROJECT_PAD" ]; then
-  MSYS_NO_PATHCONV=1 docker run --rm \
-      -v "$(pwd)/clients://cleanup" \
-      alpine \
-      rm -rf "//cleanup/${KLANTNAAM}/${PROJECTNAAM}"
+# Forceer permissies op de map die we willen verwijderen
+chmod -R 777 "$PROJECT_PAD" 2>/dev/null
+
+# Verwijder de inhoud eerst, dan de map zelf
+find "$PROJECT_PAD" -mindepth 1 -delete 2>/dev/null
+rm -rf "$PROJECT_PAD"
 
     # Controleren of de map echt weg is
     if [ ! -d "$PROJECT_PAD" ]; then

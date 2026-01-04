@@ -1,6 +1,8 @@
 services:
   platform-api:
-    build: ./platform-api
+    build:
+      context: .  # <--- Dit puntje is cruciaal! Het zegt: gebruik de huidige map (root)
+      dockerfile: platform-api/Dockerfile # <--- Wijs hier naar het pad van je Dockerfile
     ports:
       - "8080:8080"
     env_file:
@@ -13,6 +15,7 @@ services:
     volumes:
        - /var/run/docker.sock:/var/run/docker.sock
        - ./clients:/app/clients
+       - ./scripts:/app/scripts
     depends_on:
       - platform-db
 

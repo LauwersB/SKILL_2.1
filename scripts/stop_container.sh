@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "$0")/.."
+
 # 1. Controleren of er wel argumenten zijn meegegeven
 if [ -z "$1" ] || [ -z "$2" ]; then
     echo "Fout: Gebruik de juiste schrijfwijze: $0 <klantnaam> <projectnaam>"

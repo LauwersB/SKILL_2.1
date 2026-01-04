@@ -7,6 +7,9 @@
     <list default="true" id="9691b415-cb49-4c23-8e6b-5d70d41f78d9" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/start_project.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/start_project.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/stop_container.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/stop_container.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/verwijder_project.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/verwijder_project.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,7 +43,6 @@
     "SHELLCHECK.PATH": "I do mind",
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
     "git-widget-placeholder": "TUI__V2",
-    "git-widget-placeholder": "TUI",
     "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "C:/Users/school/OneDrive - Thomas More/Documenten/Thomas more/FullStack Cloud and Devops/FastAPIProject",
     "node.js.detected.package.eslint": "true",
