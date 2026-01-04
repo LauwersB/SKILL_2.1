@@ -35,14 +35,12 @@ services:
     volumes:
       - ./platform-tui/app.py:/app/app.py
       - ./platform-api/config.py:/app/config.py
-      - ./scripts:/app/scripts
-      - ./clients:/app/clients
       - .env:/app/.env
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - DB_HOST=skill_21-platform-db-1
-      - DB_USER=platform
-      - DB_PASS=platform
+      - DB_HOST=${PLATFORM_DB_HOST}
+      - DB_USER=${PLATFORM_DB_USER}
+      - DB_PASS=${PLATFORM_DB_PASSWORD}
       - API_URL=http://api:8080
     depends_on:
       - platform-db
