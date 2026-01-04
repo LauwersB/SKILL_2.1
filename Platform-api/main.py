@@ -162,3 +162,20 @@ async def add_user(req: UserRequest):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn: conn.close()
+## Endpoint that lists running containers per app_id
+
+@app.get("/containers/{app_id}")
+def containers_for_app(app_id: str, all: bool = True):
+    """
+    Return the same structure as /containers, but filtered to one app_id.
+    Matches container names:
+      {app_id}-app
+      {app_id}-db
+    """
+    try:
+        containers = list_containers(all_containers=all)
+        allowed = {f"{app_id}-app", f"{app_id}-db"}
+        filtered = [c for c in containers if c.get("name") in allowed]
+        return {"containers": filtered}
+    except ContainerProviderError as e:
+        raise HTTPException(status_code=500, detail=str(e))

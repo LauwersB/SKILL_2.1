@@ -40,6 +40,7 @@
     "SHELLCHECK.PATH": "I do mind",
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
     "git-widget-placeholder": "TUI__V2",
+    "git-widget-placeholder": "TUI",
     "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "C:/Users/school/OneDrive - Thomas More/Documenten/Thomas more/FullStack Cloud and Devops/FastAPIProject",
     "node.js.detected.package.eslint": "true",
@@ -90,7 +91,7 @@
       <workItem from="1767100552369" duration="299000" />
       <workItem from="1767265894250" duration="2194000" />
       <workItem from="1767269191414" duration="5584000" />
-      <workItem from="1767343432769" duration="9952000" />
+      <workItem from="1767343432769" duration="16056000" />
     </task>
     <servers />
   </component>
