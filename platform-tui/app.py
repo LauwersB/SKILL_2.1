@@ -2,13 +2,39 @@ import requests
 import psycopg2
 import bcrypt
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, Button, Label, Input, DataTable, Static
+from textual.widgets import Header, Footer, Button, Label, Input, DataTable, Static, LoadingIndicator, TextArea
+from textual.screen import ModalScreen
 from textual.containers import Container, Vertical, Horizontal
 from textual import on, work
 import config
 
 # API Instellingen
 API_URL = "http://skill_21-platform-api-1:8080"
+
+
+class LogScreen(ModalScreen):
+    """Een popup venster voor het bekijken van logs."""
+
+    def __init__(self, app_id: str, log_content: str):
+        super().__init__()
+        self.app_id = app_id
+        self.log_content = log_content
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="log-dialog"):
+            yield Label(f"📄 Logs voor: {self.app_id}", id="log-title")
+
+            # Maak de widget aan
+            log_view = TextArea(self.log_content, id="log-area")
+            # Zet hem op alleen-lezen
+            log_view.read_only = True
+
+            yield log_view
+            yield Button("Sluiten", variant="primary", id="btn-close-logs")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-close-logs":
+            self.app.pop_screen()
 
 
 class TuiApp(App):
@@ -59,10 +85,41 @@ class TuiApp(App):
             background: $error;
             border: tall $error-darken-2;
         }
+        
+        /* LOADER FIX */
+        LoadingIndicator {
+            height: 3;
+            color: $accent;
+            content-align: center middle;
+        }
+        
+        /* LOG MODAL */
+        #log-dialog {
+            padding: 1 2;
+            background: $panel;
+            border: thick $primary;
+            width: 80%;
+            height: 80%;
+        }
+        #log-title {
+            text-style: bold;
+            margin-bottom: 1;
+        }
+        #log-area {
+            height: 1fr;
+            border: solid $surface;
+            background: $surface;
+        }
+        #btn-close-logs {
+            margin-top: 1;
+            width: 100%;
+        }
         """
 
     current_user = None
     selected_app_id = None
+    selected_client_name = None
+    selected_user_id = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -110,7 +167,7 @@ class TuiApp(App):
                 yield DataTable(id="table-projects", cursor_type="row")
 
                 # Nieuw project starten (Github Link)
-                yield Button("+ Start Nieuw Project", id="btn-toggle-new-project", variant="success")
+                yield Button("Start/update Project", id="btn-toggle-new-project", variant="success")
 
                 with Vertical(id="new-project-box", classes="hidden"):
                     yield Label("Github Clone URL:")
@@ -126,10 +183,8 @@ class TuiApp(App):
 
                 # De actiebalk
                 with Horizontal(id="action-bar"):
-                    yield Button("🔄 Update", id="btn-update")
                     yield Button("⏸️ Pauze", id="btn-pause")
                     yield Button("📜 Logs", id="btn-logs")
-                    yield Button("ℹ️ Info", id="btn-info")
                     yield Button("🗑️ Verwijderen", id="btn-delete", variant="error")
 
 
@@ -171,15 +226,28 @@ class TuiApp(App):
         elif btn == "btn-deploy-confirm":
             url = self.query_one("#input-github").value
             self.notify(f"🚀 Deploy gestart voor: {url}")
-            # HIER later de API call naar /deploy/full-stack toevoegen
+            self.action_deploy_project()
             self.query_one("#new-project-box").add_class("hidden")
 
-        # Container Acties
-        elif btn in ["btn-update", "btn-pause", "btn-logs", "btn-info", "btn-delete"]:
+            # Container Acties
+        elif btn == "btn-pause":
             if not self.selected_app_id:
                 self.notify("⚠️ Selecteer eerst een project!", severity="warning")
                 return
-            self.notify(f"Actie '{btn}' uitgevoerd op {self.selected_app_id}")
+            # DIT roept nu de API aanroep aan:
+            self.action_pause_project()
+
+        elif btn in ["btn-delete"]:
+            if not self.selected_app_id:
+                self.notify("⚠️ Selecteer eerst een project!", severity="warning")
+                return
+            self.action_delete_project()
+
+        elif btn in ["btn-logs"]:
+            if not self.selected_app_id:
+                self.notify("⚠️ Selecteer eerst een project!", severity="warning")
+                return
+            self.action_fetch_logs()
 
     @on(DataTable.RowSelected)
     def on_table_select(self, event: DataTable.RowSelected):
@@ -189,14 +257,15 @@ class TuiApp(App):
         if table_id == "table-clients":
             # Pak de waarde uit de TWEEDE kolom (index 1), dat is de 'Naam'
             # event.cursor_row geeft de index van de geselecteerde rij
-            client_name = event.data_table.get_cell_at((event.cursor_row, 1))
+            self.selected_user_id = event.data_table.get_cell_at((event.cursor_row, 0))
+            self.selected_client_name = event.data_table.get_cell_at((event.cursor_row, 3))
 
-            self.load_projects(user_id=row_key, client_name=client_name)
+            self.load_projects(user_id=self.selected_user_id, client_name=self.selected_client_name)
             self.query_one("#section-containers").add_class("hidden")
 
         elif table_id == "table-projects":
-            self.selected_app_id = row_key
-            self.load_containers(app_id=row_key)
+            self.selected_app_id = event.row_key.value
+            self.load_containers(app_id=self.selected_app_id)
 
     # --- LOGICA ---
     def check_login(self):
@@ -338,19 +407,238 @@ class TuiApp(App):
 
         table = self.query_one("#table-containers")
         table.clear(columns=True)
-        table.add_columns("Container Naam", "Image", "Status", "CPU %", "RAM")
 
-        all_containers = self.fetch_api_containers()
-        project_containers = [c for c in all_containers if c['name'].startswith(app_id)]
+        # We voegen kolommen toe die passen bij jouw specifieke data
+        table.add_columns("Container Naam", "Status", "Gezondheid", "CPU %", "RAM Gebruik")
 
-        if not project_containers:
-            table.add_row("Geen actieve containers", "-", "Offline", "-", "-")
-        else:
-            for c in project_containers:
-                table.add_row(
-                    c['name'], c['image'], c['state'],
-                    c.get('cpu_percent', '0%'), c.get('mem_usage', '0MB')
+        try:
+            # Gebruik het specifieke endpoint voor deze app_id
+            url = f"{API_URL}/containers/{app_id}"
+
+            worker = self.run_worker(
+                lambda: requests.get(url, timeout=5),
+                thread=True
+            )
+            resp = await worker.wait()
+
+            if resp.status_code == 200:
+                container_data = resp.json().get("containers", [])
+
+                if not container_data:
+                    table.add_row("Geen actieve containers", "-", "-", "-", "-")
+                else:
+                    for c in container_data:
+                        # Hier mappen we de JSON velden naar de tabel
+                        table.add_row(
+                            c.get("name", "N/A"),
+                            c.get("state", "offline"),
+                            c.get("health", "unknown"),
+                            c.get("cpu_percent", "0.00%"),
+                            c.get("mem_usage", "0MiB / 0GiB")
+                        )
+            else:
+                self.notify(f"❌ API Fout: {resp.status_code}", severity="error")
+
+        except Exception as e:
+            self.notify(f"❌ Verbinding mislukt: {e}", severity="error")
+            table.add_row("Fout bij laden", "-", "-", "-", "-")
+
+    @work(exclusive=True)
+    async def action_deploy_project(self):
+        github_url = self.query_one("#input-github").value
+
+        # Bepaal de juiste client_name (Admin selectie OF eigen account)
+        client_name = self.selected_client_name if self.current_user['role'] == 'admin' else self.current_user['client']
+
+        if not github_url or not client_name:
+            self.notify("⚠️ Github URL of Clientnaam ontbreekt!", severity="error")
+            return
+
+        # 1. We zoeken de sectie waar de loader moet komen
+        project_section = self.query_one("#section-projects")
+        # 2. We maken de loader aan
+        loader = LoadingIndicator(id="deploy-loader")
+        # 3. We plakken hem in het scherm
+        await project_section.mount(loader)
+
+        self.notify(f"🚀 Deploy gestart voor {client_name}...")
+        self.query_one("#new-project-box").add_class("hidden")
+
+        try:
+            payload = {"client_name": client_name, "github_url": github_url}
+            # We wachten op de API
+            worker = self.run_worker(
+                lambda: requests.post(f"{API_URL}/deploy/start", json=payload, timeout=120),
+                thread=True
+            )
+
+            # We wachten op het resultaat van de worker
+            resp = await worker.wait()
+
+            if resp.status_code == 200:
+                self.notify("✅ Project succesvol gedeployed!")
+                self.load_projects(
+                    user_id=self.selected_user_id or self.current_user['id'],
+                    client_name=client_name
                 )
+            else:
+                self.notify(f"❌ Fout: {resp.json().get('detail')}", severity="error")
+        except Exception as e:
+            self.notify(f"❌ Verbinding mislukt: {e}", severity="error")
+
+        finally:
+            # --- NIEUW: LAAD-INDICATOR VERWIJDEREN ---
+            loader.remove()
+
+    @work(exclusive=True)
+    async def action_pause_project(self):
+        full_app_id = self.selected_app_id
+        client_name = self.selected_client_name if self.current_user['role'] == 'admin' else self.current_user['client']
+
+        if not full_app_id or not client_name:
+            self.notify("⚠️ Selectie onvolledig", severity="error")
+            return
+
+        # STRIP de client_name van de app_id om de pure projectnaam over te houden
+        # We halen "{client_name}_" weg aan het begin van de string
+        prefix = f"{client_name}_"
+        if full_app_id.startswith(prefix):
+            pure_project_name = full_app_id[len(prefix):]
+        else:
+            pure_project_name = full_app_id  # Fallback
+
+        self.notify(f"⏸️ Pauzeren: {pure_project_name} (Klant: {client_name})")
+
+        # DEBUG: Laat zien wat we gaan sturen
+        self.notify(f"DEBUG STUREN: client={client_name}, project={pure_project_name}")
+
+        if not pure_project_name or not client_name:
+            self.notify("⚠️ App ID of Client Name ontbreekt!", severity="error")
+            return
+
+        # Loader logica
+        try:
+            old_loader = self.query_one("#pause-loader")
+            old_loader.remove()
+        except:
+            pass
+
+        container_section = self.query_one("#section-containers")
+        loader = LoadingIndicator(id="pause-loader")
+        await container_section.mount(loader)
+
+        try:
+            payload = {
+                "client_name": client_name,
+                "project_name": pure_project_name
+            }
+
+            # Gebruik de worker voor de request
+            worker = self.run_worker(
+                lambda: requests.post(f"{API_URL}/deploy/pauze", json=payload, timeout=30),
+                thread=True
+            )
+            resp = await worker.wait()
+
+            if resp.status_code == 200:
+                self.notify(f"✅ Project {pure_project_name} gepauzeerd.")
+                await self.load_containers(app_id=full_app_id)
+            else:
+                self.notify(f"❌ Fout: {resp.status_code}", severity="error")
+
+        except Exception as e:
+            self.notify(f"❌ Verbinding mislukt: {e}", severity="error")
+        finally:
+            loader.remove()
+
+    @work(exclusive=True)
+    async def action_delete_project(self):
+        full_app_id = self.selected_app_id
+        client_name = self.selected_client_name if self.current_user['role'] == 'admin' else self.current_user['client']
+
+        if not full_app_id:
+            self.notify("⚠️ Geen project geselecteerd", severity="warning")
+            return
+
+        # Zorg dat we de pure projectnaam sturen (zonder klant_ prefix)
+        prefix = f"{client_name}_"
+        pure_project_name = full_app_id[len(prefix):] if full_app_id.startswith(prefix) else full_app_id
+
+        # --- LOADER START ---
+        try:
+            self.query_one("#delete-loader").remove()
+        except:
+            pass
+
+        container_section = self.query_one("#section-containers")
+        loader = LoadingIndicator(id="delete-loader")
+        await container_section.mount(loader)
+
+        self.notify(f"🗑️ Verwijderen van {pure_project_name} gestart...")
+
+        try:
+            payload = {
+                "client_name": client_name,
+                "project_name": pure_project_name
+            }
+
+            # VERANDERD: we gebruiken nu .post in plaats van .delete
+            worker = self.run_worker(
+                lambda: requests.post(f"{API_URL}/deploy/verwijderen", json=payload, timeout=45),
+                thread=True
+            )
+            resp = await worker.wait()
+
+            if resp.status_code == 200:
+                data = resp.json()
+                self.notify(f"✅ {data.get('message')}")
+
+                # Verberg de container sectie en ververs de lijst
+                self.query_one("#section-containers").add_class("hidden")
+                self.load_projects(user_id=self.selected_user_id or self.current_user['id'], client_name=client_name)
+            else:
+                # Probeer de specifieke error uit de FastAPI HTTPException te halen
+                try:
+                    error_detail = resp.json().get('detail', 'Onbekende fout op server')
+                except:
+                    error_detail = f"Status code: {resp.status_code}"
+
+                self.notify(f"❌ Verwijderen mislukt: {error_detail}", severity="error")
+
+        except Exception as e:
+            self.notify(f"❌ Verbinding mislukt: {e}", severity="error")
+        finally:
+            loader.remove()
+
+    @work(exclusive=True)
+    async def action_fetch_logs(self):
+        app_id = self.selected_app_id  # Hier hebben we de VOLLEDIGE id nodig (klant_project)
+
+        if not app_id:
+            self.notify("⚠️ Selecteer eerst een project!", severity="warning")
+            return
+
+        self.notify(f"⌛ Logs ophalen voor {app_id}...")
+
+        try:
+            # We vragen om 'raw' formaat zodat we één grote string krijgen voor de TextArea
+            url = f"{API_URL}/apps/{app_id}/logs?format=raw&tail=100"
+
+            worker = self.run_worker(
+                lambda: requests.get(url, timeout=10),
+                thread=True
+            )
+            resp = await worker.wait()
+
+            if resp.status_code == 200:
+                # Open de Modal met de ontvangen tekst
+                self.push_screen(LogScreen(app_id, resp.text))
+            else:
+                detail = resp.json().get('detail', 'Onbekende fout')
+                self.notify(f"❌ Logs mislukt: {detail}", severity="error")
+
+        except Exception as e:
+            self.notify(f"❌ Verbinding mislukt: {e}", severity="error")
 
 
 if __name__ == "__main__":

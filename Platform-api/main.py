@@ -187,52 +187,50 @@ class FrontendDeployRequest(BaseModel):
     client_name: str
     github_url: str
 
+
 @app.post("/deploy/start")
 def trigger_deployment_script(req: FrontendDeployRequest):
-    # 1. Bepaal waar we nu zijn (in /app/platform-api/main.py)
     current_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # 2. Bepaal de hoofdmap (één niveau omhoog, dus /app)
-    # Dit is belangrijk omdat je script verwacht vanuit de root te draaien
     project_root = os.path.dirname(current_dir)
-
-    # 3. Het pad naar het script (/app/scripts/start_project.sh)
-    # We gebruiken os.path.join voor veilige paden
     script_path = os.path.join(project_root, "scripts", "start_project.sh")
 
-    # Debugging: print even waar we denken dat alles staat
-    print(f"API locatie: {current_dir}")
-    print(f"Project root: {project_root}")
-    print(f"Script pad: {script_path}")
-
-    # 4. Check of het script bestaat binnen de container
     if not os.path.exists(script_path):
-        raise HTTPException(
-            status_code=500,
-            detail=f"Script niet gevonden op: {script_path}. Zijn de scripts wel in de container gemount?"
-        )
+        raise HTTPException(status_code=500, detail=f"Script niet gevonden op: {script_path}")
 
     try:
-        # 5. Voer het script uit
+        # 1. Voer het script uit
         result = subprocess.run(
             [script_path, req.client_name, req.github_url],
-            cwd=project_root,  # <--- CRUCIAAL: Draai het script vanuit de hoofdmap!
+            cwd=project_root,
             capture_output=True,
             text=True,
             check=True
         )
 
+        # 2. RECHTEN BINNEN DE CONTAINER FIXEN
+        # De naam moet exact overeenkomen met je docker-compose container_name
+        pure_project_name = req.github_url.split('/')[-1].replace('.git', '')
+        container_name = f"{req.client_name}_{pure_project_name}-app"
+
+        # Geef Docker de tijd om de container te starten
+        import time
+        time.sleep(3)
+
+        try:
+            # We voeren dit uit via de Docker CLI die in je API-container is geïnstalleerd
+            subprocess.run(["docker", "exec", "-u", "root", container_name, "chmod", "-R", "755", "/var/www/html"], check=True)
+            subprocess.run(["docker", "exec", "-u", "root", container_name, "chown", "-R", "www-data:www-data", "/var/www/html"], check=True)
+            logging.info(f"✅ Rechten succesvol aangepast in container: {container_name}")
+        except Exception as e:
+            logging.error(f"⚠️ Kon rechten in container niet aanpassen: {e}")
+
         return {
-            "message": "Deployment script gestart",
+            "message": "Deployment succesvol en permissies hersteld",
             "output": result.stdout
         }
 
     except subprocess.CalledProcessError as e:
-        print(f"Script Error: {e.stderr}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Script execution failed: {e.stderr}"
-        )
+        raise HTTPException(status_code=500, detail=f"Script execution failed: {e.stderr or e.stdout}")
 
 
 # Model voor de pauze aanvraag
