@@ -74,7 +74,6 @@ def init_platform_db():
 
         # 2. Gebruik de cursor (cur) bij het aanroepen!
         create_user_if_not_exists(cur, config.admin_user, config.admin_pass, "admin", "internal")
-        create_user_if_not_exists(cur, "testuser", "123", "user", "test_client")
 
         conn.commit() # Nu wordt alles pas echt opgeslagen
         cur.close()
