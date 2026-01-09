@@ -1,6 +1,8 @@
 #!/bin/bash
 # --- start_project.sh ---
 
+cd "$(dirname "$0")/.."
+
 # Configuratie
 API_URL="http://127.0.0.1:8080/deploy/full-stack"
 PLATFORM_DB_CONTAINER="skill_21-platform-db-1"

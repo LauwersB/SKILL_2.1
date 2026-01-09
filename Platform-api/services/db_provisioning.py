@@ -90,3 +90,4 @@ def provision_database(app_id: str):
         "db_pass": _generate_random_string(PASSWORD_LENGTH),
         "db_port": _find_free_port()
     }
+
