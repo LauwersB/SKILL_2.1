@@ -71,7 +71,7 @@ Alles staat klaar op papier (in de YAML files), nu moet het gaan draaien.
     * De containers starten op: `klant_a_project-app` en `klant_a_project-db`.
     * De app is nu bereikbaar via de browser op de toegewezen poort (bijv. `localhost:8081`).
 
-### 1.6 Operationeel: Beheer & Monitoring
+### 1.7 Operationeel: Beheer & Monitoring
 De app draait. Wat nu?
 * **Status Checken:**
     * Jij roept `GET /apps` aan.
@@ -218,12 +218,13 @@ This module provides helpers for generating credentials and finding unused ports
 ### 5.6 deployer.py
 The orchestration layer. It ties detection and provisioning together to create the deployment artifacts.
 
-| Function | Description |
-| :--- | :--- |
-| `generate_full_deployment(app_id: str, source_path: str) -> (compose_dict, web_port, db_port)` | "Blueprint generator": detects app, decides whether to add DB and web services, assigns free ports, injects env variables, writes /app/deployments/<app_id>/docker-compose.yml, and persists a provision record. |
-| `_prepare_db_config(app_id: str, db_type: str, db_image: str) -> Dict` | Builds DB service config: generates credentials, chooses external port, decides internal port, produces docker-compose fields and storage_data. Sits between detection ("we need a DB") and compose generation ("here is the DB service definition"). |
-| `_write_compose_file(app_id: str, compose_dict: Dict) -> str` | Writes generated compose dict as YAML to /app/deployments/<app_id>/docker-compose.yml. |
-| `_write_app_dockerfile(app_id: str)` | Writes generated Dockerfile with msqli PHP-requirements to /app/deployments/<app_id>/Dockerfile.app. |
+| Function                                                                                       | Description                                                                                                                                                                                                                                           |
+|:-----------------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `generate_full_deployment(app_id: str, source_path: str) -> (compose_dict, web_port, db_port)` | "Blueprint generator": detects app, decides whether to add DB and web services, assigns free ports, injects env variables, writes /app/deployments/<app_id>/docker-compose.yml, and persists a provision record.                                      |
+| `_prepare_db_config(app_id: str, db_type: str, db_image: str) -> Dict`                         | Builds DB service config: generates credentials, chooses external port, decides internal port, produces docker-compose fields and storage_data. Sits between detection ("we need a DB") and compose generation ("here is the DB service definition"). |
+| `_write_compose_file(app_id: str, compose_dict: Dict) -> str`                                  | Writes generated compose dict as YAML to /app/deployments/<app_id>/docker-compose.yml.                                                                                                                                                                |
+| `_write_app_dockerfile(app_id: str)`                                                           | Writes generated Dockerfile with msqli PHP-requirements to /app/deployments/<app_id>/Dockerfile.app.                                                                                                                                                  |
+| `_write_python_dockerfile(app_id: str)`                                                        | Writes generated Dockerfile with Python-requirements to /app/deployments/<app_id>/Dockerfile.app.                                                                                                                                                     |
 
 ### 5.7 logs.py
 This module provides read-only log access for running containers. It hides Docker-specific commands behind a small helper so the API layer remains portable (e.g. Kubernetes later).

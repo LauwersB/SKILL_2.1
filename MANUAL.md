@@ -16,6 +16,7 @@ stappenplan:
 ## Happy Path
 
 bash ./scripts/start_project.sh test_client "https://github.com/maarten-wils/crud-php-mysql-simple.git"
+bash ./scripts/start_project.sh test_client "https://github.com/maarten-wils/fastapi-postgres-docker-example"
 
 endpoint post/deploy/start is gemaakt zodat docker dit script kan oproepen. deze endpoint kan je testen met:
 
