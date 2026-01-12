@@ -72,6 +72,39 @@ def _write_app_dockerfile(app_id: str, source_path: str):
     with open(dockerfile_path, 'w', encoding="utf-8") as f:
         f.write(content)
 
+def _write_python_dockerfile(app_id: str, source_path: str):
+    """Maakt een Dockerfile aan voor Python/FastAPI apps (Maartens fix)."""
+    project_root = os.path.dirname(source_path)
+    deploy_path = os.path.join(project_root, "deployment")
+    os.makedirs(deploy_path, exist_ok=True)
+
+    dockerfile_path = os.path.join(deploy_path, "Dockerfile.python")
+    content = (
+        "FROM python:3.11-slim\n"
+        "WORKDIR /app\n"
+        "\n"
+        "# Build deps for psycopg2 + curl for healthcheck\n"
+        "RUN apt-get update && apt-get install -y curl gcc libpq-dev \\\n"
+        " && rm -rf /var/lib/apt/lists/*\n"
+        "\n"
+        "# Copy ingested repo content into the image\n"
+        "COPY source/ /app/\n"
+        "\n"
+        "# Remove repo .env so platform-injected environment variables win\n"
+        "RUN rm -f /app/.env\n"
+        "\n"
+        "# Install dependencies (FastAPI, psycopg2, etc.)\n"
+        "RUN pip install --no-cache-dir -r requirements.txt\n"
+        "\n"
+        "# Run FastAPI (repo uses app/main.py)\n"
+        "EXPOSE 8000\n"
+        "CMD [\"uvicorn\", \"app.main:server\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]\n"
+
+    )
+
+    with open(dockerfile_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
 def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tuple[Optional[Dict], Optional[int], Optional[int]]:
     detection = detect_application_type(source_path)
     if "error" in detection:
@@ -92,7 +125,11 @@ def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tup
             "image": db_cfg["image"],
             "environment": db_cfg["environment"],
             ## "ports": [db_cfg["port_mapping"]],
-            "networks": [network_name],
+            "networks": {
+                network_name: {
+                    "aliases": ["db"] # Many example repos expect the DB hostname to be 'db' (docker-compose convention)
+                }
+            },
             "restart": "unless-stopped"
         }
 
@@ -124,14 +161,25 @@ def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tup
         db_info = db_cfg["storage_data"]
 
 
-    # 2. Web Sectie (Inclusief Maartens PHP/mysqli fix)
+    # 2. Web Sectie (Inclusief Maartens PHP/mysqli + Python/FastAPI fix)
     web_conts = detection.get('containers', {}).get('web', [])
     web_port = _find_free_port(8081)
 
     if web_conts:
-        is_php_app = detection.get("app_type") == "php"
+        app_type = (detection.get("app_type") or "").lower()
+        is_php_app = app_type == "php"
+        is_python_app = app_type == "python"
+
+        # Choose internal port based on runtime
+        internal_port = 80
+        if is_python_app:
+            internal_port = 8000  # FastAPI default
+
+        # Create generated Dockerfiles when needed
         if is_php_app:
             _write_app_dockerfile(app_id, source_path)
+        if is_python_app:
+            _write_python_dockerfile(app_id, source_path)
 
         web_env = {}
         if db_info:
@@ -140,31 +188,58 @@ def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tup
                 "DB_PORT": str(db_info["db_port"]),
                 "DB_NAME": db_info["db_name"],
                 "DB_USER": db_info["db_user"],
-                "DB_PASS": db_info["db_password"]
+                "DB_PASS": db_info["db_password"],
             }
+
+            # Python apps often use DATABASE_URL; provide it as a compatibility alias.
+            web_env["DATABASE_URL"] = (
+                f"postgresql://{db_info['db_user']}:{db_info['db_password']}"
+                f"@database:{db_info['db_port']}/{db_info['db_name']}"
+            )
+
+            # Example repo expects POSTGRES_* variables (it normally reads them from .env).
+            # We set them so the app uses the platform credentials.
+            web_env["POSTGRES_SERVER"] = "db"
+            web_env["POSTGRES_PORT"] = str(db_info["db_port"])
+            web_env["POSTGRES_DB"] = db_info["db_name"]
+            web_env["POSTGRES_USER"] = db_info["db_user"]
+            web_env["POSTGRES_PASSWORD"] = db_info["db_password"]
 
         app_service = {
             "container_name": f"{app_id}-app",
-            "ports": [f"{web_port}:80"],
-            "volumes": ["../source:/var/www/html"],
+            "ports": [f"{web_port}:{internal_port}"],
             "environment": web_env,
             "networks": [network_name],
-            "restart": "unless-stopped"
-        }
-
-        ## Minimal app healthcheck
-        app_service["healthcheck"] = {
-            "test": ["CMD-SHELL", "curl -sS -o /dev/null http://127.0.0.1/ || exit 1"],
-            "interval": "10s",
-            "timeout": "3s",
-            "retries": 10,
-            "start_period": "15s",
+            "restart": "unless-stopped",
         }
 
         if is_php_app:
+            # Keep existing behavior for PHP: mount source into Apache web root.
+            app_service["volumes"] = ["../source:/var/www/html"]
             app_service["build"] = {"context": ".", "dockerfile": "Dockerfile.app"}
+
+        elif is_python_app:
+            # For Python we build an image that copies source/ inside the image.
+            # Compose is located in deployment/, so the build context must be the project root ("..")
+            app_service["build"] = {"context": "..", "dockerfile": "deployment/Dockerfile.python"}
+
         else:
+            # Default fallback: keep old behavior
+            app_service["volumes"] = ["../source:/var/www/html"]
             app_service["image"] = web_conts[0]["image"]
+
+        # Healthcheck should hit the right internal port
+        health_url = "http://127.0.0.1/"
+        if is_python_app:
+            health_url = "http://127.0.0.1:8000/"
+
+        app_service["healthcheck"] = {
+            "test": ["CMD-SHELL", f"curl -sS -o /dev/null {health_url} || exit 1"],
+            "interval": "10s",
+            "timeout": "3s",
+            "retries": 10,
+            "start_period": "20s",
+        }
 
         services["app"] = app_service
 
