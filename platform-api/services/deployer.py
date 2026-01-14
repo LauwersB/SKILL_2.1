@@ -225,7 +225,7 @@ def generate_full_deployment(app_id: str, source_path: str, user_id: int) -> Tup
 
         else:
             # Default fallback: keep old behavior
-            app_service["volumes"] = ["../source:/var/www/html"]
+            app_service["volumes"] = ["../source:/usr/share/nginx/html"]
             app_service["image"] = web_conts[0]["image"]
 
         # Healthcheck should hit the right internal port
