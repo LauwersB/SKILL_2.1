@@ -560,11 +560,10 @@ class TuiApp(App):
             self.notify("⚠️ Geen project geselecteerd", severity="warning")
             return
 
-        # Zorg dat we de pure projectnaam sturen (zonder klant_ prefix)
         prefix = f"{client_name}_"
         pure_project_name = full_app_id[len(prefix):] if full_app_id.startswith(prefix) else full_app_id
 
-        # --- LOADER START ---
+        # Loader initialisatie
         try:
             self.query_one("#delete-loader").remove()
         except:
@@ -582,31 +581,45 @@ class TuiApp(App):
                 "project_name": pure_project_name
             }
 
-            # VERANDERD: we gebruiken nu .post in plaats van .delete
+            # We voeren de request uit in een worker
+            # TIP: Verhoog de timeout naar 60 als het verwijderen van containers traag is
             worker = self.run_worker(
-                lambda: requests.post(f"{API_URL}/deploy/verwijderen", json=payload, timeout=45),
+                lambda: requests.post(f"{API_URL}/deploy/verwijderen", json=payload, timeout=60),
                 thread=True
             )
             resp = await worker.wait()
 
-            if resp.status_code == 200:
-                data = resp.json()
-                self.notify(f"✅ {data.get('message')}")
+            # DEBUG: Print de status in je terminal om te zien wat er echt gebeurt
+            print(f"DEBUG: API Status Code: {resp.status_code}")
+            print(f"DEBUG: API Response Body: {resp.text}")
 
-                # Verberg de container sectie en ververs de lijst
+            if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                    message = data.get('message', 'Project succesvol verwijderd')
+                except:
+                    message = "Project verwijderd (geen leesbaar antwoord van server)"
+
+                self.notify(f"✅ {message}")
+
+                # UI Updaten
                 self.query_one("#section-containers").add_class("hidden")
                 self.load_projects(user_id=self.selected_user_id or self.current_user['id'], client_name=client_name)
+
             else:
-                # Probeer de specifieke error uit de FastAPI HTTPException te halen
+                # Als de status code niet 200 is, proberen we de fout te vinden
                 try:
                     error_detail = resp.json().get('detail', 'Onbekende fout op server')
                 except:
-                    error_detail = f"Status code: {resp.status_code}"
+                    error_detail = f"Server gaf foutcode {resp.status_code}"
 
                 self.notify(f"❌ Verwijderen mislukt: {error_detail}", severity="error")
 
+        except requests.exceptions.Timeout:
+            self.notify("❌ Time-out: De server doet er te lang over, maar de actie loopt mogelijk door.",
+                        severity="error")
         except Exception as e:
-            self.notify(f"❌ Verbinding mislukt: {e}", severity="error")
+            self.notify(f"❌ Verbinding mislukt: {str(e)}", severity="error")
         finally:
             loader.remove()
 
