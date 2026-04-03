@@ -47,18 +47,21 @@ fi
 
 # 4. Projectmap verwijderen
 echo "Stap 3: Bestanden verwijderen in $PROJECT_PAD..."
-# Forceer permissies op de map die we willen verwijderen
-chmod -R 777 "$PROJECT_PAD" 2>/dev/null
 
-# Verwijder de inhoud eerst, dan de map zelf
-find "$PROJECT_PAD" -mindepth 1 -delete 2>/dev/null
-rm -rf "$PROJECT_PAD"
+if [ -d "$PROJECT_PAD" ]; then
+    # Forceer permissies op de map die we willen verwijderen
+    chmod -R 777 "$PROJECT_PAD" 2>/dev/null
 
-    # Controleren of de map echt weg is
+    # Verwijder de inhoud eerst, dan de map zelf
+    find "$PROJECT_PAD" -mindepth 1 -delete 2>/dev/null
+    rm -rf "$PROJECT_PAD"
+
+    # Controleren of de map nu echt weg is
     if [ ! -d "$PROJECT_PAD" ]; then
         echo "Succes: Map $PROJECT_PAD is verwijderd."
     else
         echo "Fout: Kon de map $PROJECT_PAD niet verwijderen (check permissies)."
+        exit 1
     fi
 else
     echo "Waarschuwing: Map $PROJECT_PAD bestond al niet."
